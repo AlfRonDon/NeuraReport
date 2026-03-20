@@ -1,0 +1,24 @@
+{
+  "event": "mapping_key_options",
+  "timestamp": "20260320-171938",
+  "template_id": "scale2-consumption-report-5fb15d-pdf",
+  "template_kind": "pdf",
+  "connection_id": "c6e94c43-de32-48b2-9f58-e12a88e51bbd",
+  "db_path": "/home/rohith/desktop/NeuraReport/recipe_log.sqlite3",
+  "tokens_available": [
+    "batch_number"
+  ],
+  "token_details": {
+    "batch_number": {
+      "table": "neuract__Scale2",
+      "column": "OIL_BACTH_COUNT",
+      "date_column": "timestamp_utc",
+      "applied_date_filters": false,
+      "fallback_used": false,
+      "error": "Failed to load table: Table 'neuract__Scale2' not found in /home/rohith/desktop/NeuraReport/recipe_log.sqlite3",
+      "row_count": 0,
+      "mode": "dataframe",
+      "binding_source": "mapping"
+    }
+  }
+}

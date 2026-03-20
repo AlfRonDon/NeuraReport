@@ -1,0 +1,48 @@
+{
+  "correlation_id": null,
+  "file_checksums": {
+    "filled_1772666406.html": "f061c206d14fcabbaf569f5d33df5d0dc830159abc93fb1abbacb0db1c46283c",
+    "filled_1772666406.pdf": "d8b456829594b21799d910aab4338f5e358a9e6292bc8d8056e6941f2eba9bd7",
+    "filled_1772666413.html": "f061c206d14fcabbaf569f5d33df5d0dc830159abc93fb1abbacb0db1c46283c",
+    "filled_1772666413.pdf": "3c3dce54f5c46d710bfa0065fd11b61bf5230acfe0702e1beaa495260d9589f9",
+    "filled_1772666428.html": "06c4e6a3a70c6aa320baf588add5304a036837bb5af033dfa761866aa19c87a1",
+    "filled_1772666428.pdf": "58cd013535655a109719b1e911ae759ab771dbb550f958ca037d18c6b17fb413",
+    "filled_1772667604.html": "3eaaedbb0b061af81da3abac6eb7b002749bb10324a3d086845cfdd90c76374b",
+    "filled_1772667604.pdf": "dddcab0a191e2871e35fc73f49eb0403ad4eca6196314356475c454380c2d737",
+    "filled_1772667784.html": "f38bc96383329a944429a71a1d8f50ecea224fd69472ff03e91fe2679f4986f6",
+    "filled_1772667784.pdf": "0e33751b0e73703461452efa0e47ba92bd8448f90ba45973e2ebc82829852bbc",
+    "filled_1772668099.html": "da084f670f49772c7a5327c3e632ee75da4273cc593457adb1cf83f7c35a72a5",
+    "filled_1772668099.pdf": "4e21c16b9ec909bc4408c06957dcb2a8575552f1fe568b5673ece6b5c1a1aef0",
+    "filled_1772668525.html": "d24002b41b8eee043ae727360522b62ac4c3fe651495ca3e45d4f38a0794fb85",
+    "filled_1772668525.pdf": "baa4aa1e8cc8a21edb082e7578da2d0b8552dac132de0d49a1a3d514ec48095f",
+    "filled_1773993406.html": "e0f0ba082567576a558517b0c1e82c2c189fdf35c0a265332f23b54124c1fd9a",
+    "filled_1773993406.pdf": "a58821de14483f8ccb56997967a10db4249f5f0de65225091763ddc76f287769"
+  },
+  "files": {
+    "filled_1772666406.html": "filled_1772666406.html",
+    "filled_1772666406.pdf": "filled_1772666406.pdf",
+    "filled_1772666413.html": "filled_1772666413.html",
+    "filled_1772666413.pdf": "filled_1772666413.pdf",
+    "filled_1772666428.html": "filled_1772666428.html",
+    "filled_1772666428.pdf": "filled_1772666428.pdf",
+    "filled_1772667604.html": "filled_1772667604.html",
+    "filled_1772667604.pdf": "filled_1772667604.pdf",
+    "filled_1772667784.html": "filled_1772667784.html",
+    "filled_1772667784.pdf": "filled_1772667784.pdf",
+    "filled_1772668099.html": "filled_1772668099.html",
+    "filled_1772668099.pdf": "filled_1772668099.pdf",
+    "filled_1772668525.html": "filled_1772668525.html",
+    "filled_1772668525.pdf": "filled_1772668525.pdf",
+    "filled_1773993406.html": "filled_1773993406.html",
+    "filled_1773993406.pdf": "filled_1773993406.pdf"
+  },
+  "input_refs": [
+    "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/scale-2-consumption-per-batch-2e5e27-pdf/contract.json",
+    "/home/rohith/desktop/NeuraReport/recipe_log (1).sqlite3",
+    "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/scale-2-consumption-per-batch-2e5e27-pdf-c754bf-pdf/contract.json"
+  ],
+  "pid": 863353,
+  "produced_at": "2026-03-20T07:56:47.025031+00:00",
+  "schema_version": "1.0",
+  "step": "reports_run"
+}

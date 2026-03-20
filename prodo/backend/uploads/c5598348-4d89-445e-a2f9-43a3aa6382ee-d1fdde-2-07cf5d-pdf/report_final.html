@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Consumption report</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  :root{
+    --col-slno-w: 18mm;
+    --col-mat-w: 90mm;
+    --col-set-w: 28mm;
+    --col-ach-w: 28mm;
+    --col-err-w: 24mm;
+    --col-errp-w: 22mm;
+    --table-font: 12.5px;
+    --small-font: 12px;
+    --title-font: 28px;
+    --label-w: 32mm;
+  }
+  html, body { font-family: "Times New Roman", Georgia, serif; color:#000; }
+  body { line-height: 1.25; }
+  .rule { border:1px solid #000; border-top-width:1px; }
+  .info-grid { display:flex; justify-content: space-between; gap: 20mm; }
+  .info-left,
+  .info-right { display:flex; flex-direction:column; gap:4mm; min-width:0; }
+  .kv { display:grid; grid-template-columns: var(--label-w) auto 1fr; gap: 0 6mm; align-items: center; }
+  .kv .lab { white-space: nowrap; font-weight:700; }
+  .kv .val { font-weight:700; }
+  .kv.recipe { margin-top:2mm; grid-template-columns: auto auto auto; }
+  .kv.recipe .val { min-width:32mm; text-align:left; }
+  .box { border:1px solid #000; padding: 6mm 7mm; }
+  h1.title { font-weight: 700; font-size: var(--title-font); text-align: center; margin: 0; padding: 2mm 0 1mm; }
+  #report-header { margin-bottom: 5mm; }
+  #report-header .kv span { font-size: var(--small-font); }
+  /* Row tables */
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .row-table { font-size: var(--table-font); margin-bottom: 8mm; /* page-break-inside: avoid; */ }
+  .row-table:last-of-type { margin-bottom: 0; }
+  .row-table thead th {
+    border:1px solid #000; padding: 6px 6px; font-weight: 700; text-align: left;
+    vertical-align: middle;
+  }
+  .row-table thead th:nth-child(1){ width: var(--col-slno-w); text-align: left; }
+  .row-table thead th:nth-child(2){ width: var(--col-mat-w); }
+  .row-table thead th:nth-child(3){ width: var(--col-set-w); text-align: right; }
+  .row-table thead th:nth-child(4){ width: var(--col-ach-w); text-align: right; }
+  .row-table thead th:nth-child(5){ width: var(--col-err-w); text-align: right; }
+  .row-table thead th:nth-child(6){ width: var(--col-errp-w); text-align: right; }
+  .row-table tbody td {
+    border-left:1px solid #000; border-right:1px solid #000; border-bottom:1px solid #000;
+    padding: 6px 6px; vertical-align: top;
+  }
+  .row-table tbody td.num { text-align: right; }
+  .row-table tbody td.center { text-align: center; }
+  /* Totals per table */
+  .row-table tfoot td {
+    border-left:1px solid #000; border-right:1px solid #000; border-bottom:1px solid #000;
+    padding: 8px 6px; font-weight: 700;
+  }
+  .row-table tfoot tr:first-child td { border-top:2px solid #000; }
+  .row-table caption { caption-side: top; }
+  /* Subhead key-values line inside the boxed header */
+  .subgrid { display:grid; grid-template-columns: auto auto auto; gap: 2mm 12mm; }
+  .subgrid .kv { grid-template-columns: auto auto; }
+  .lab { font-weight: 700; }
+  .soft { font-weight: 400; }
+
+/* Key values: stack vertically, never overflow */
+.key-values { display: flex; flex-direction: column; gap: 1px; max-width: 250px; word-break: break-word; }
+.key-values span { display: block; font-size: 10px; line-height: 1.3; }
+</style>
+</head>
+<body>
+  <div id="report-header" class="box">
+    <div class="info-grid">
+      <div class="info-left">
+        <div class="kv"><span class="lab">Plant name</span><span class="soft">:</span><span class="val">Coastal Feeds</span></div>
+        <div class="kv"><span class="lab">Location</span><span class="soft">:</span><span class="val">Gudivada</span></div>
+        <div class="kv"><span class="lab">Print Date</span><span class="soft">:</span><span class="val">{print_date}</span></div>
+      </div>
+      <div class="info-right">
+        <div class="kv"><span class="lab">From</span><span class="soft">:</span><span class="val">{from_datetime}</span></div>
+        <div class="kv"><span class="lab">To</span><span class="soft">:</span><span class="val">{to_datetime}</span></div>
+        <div class="kv recipe"><span class="lab">Recipe code</span><span class="soft">:</span><span class="val"><div class="key-values">{recipe_code}</div></span></div>
+      </div>
+    </div>
+
+    <h1 class="title">Consumption report</h1>
+  </div>
+
+  <section class="batch-block">
+    <table class="row-table">
+      <thead>
+        <tr>
+          <th data-label="sl_no">Sl. No.</th>
+          <th data-label="material_name">Material name</th>
+          <th data-label="set_wt_kg" style="text-align:right">Set. wt(Kg)</th>
+          <th data-label="ach_wt_kg" style="text-align:right">Ach. wt(Kg)</th>
+          <th data-label="error_kg" style="text-align:right">Error(Kg)</th>
+          <th data-label="error_pct" style="text-align:right">Error %</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="center">{row_sl_no}</td>
+          <td>{row_material_name}</td>
+          <td class="num">{row_set_wt_kg}</td>
+          <td class="num">{row_ach_wt_kg}</td>
+          <td class="num">{row_error_kg}</td>
+          <td class="num">{row_error_pct}</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td style="text-align:left" colspan="2">Total</td>
+          <td class="num">{total_set_wt}</td>
+          <td class="num">{total_ach_wt}</td>
+          <td class="num">{total_error_kg}</td>
+          <td class="num">{total_error_pct}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+
+  <script type="application/json" id="SCHEMA_JSON">
+  {
+    "plant_name": "",
+    "location": "",
+    "print_date": "",
+    "date_from": "",
+    "date_to": "",
+    "recipe_code": "",
+    "row_sl_no": "",
+    "row_material_name": "",
+    "row_set_wt_kg": "",
+    "row_ach_wt_kg": "",
+    "row_error_kg": "",
+    "row_error_pct": "",
+    "total_set_wt": "",
+    "total_ach_wt": "",
+    "total_error_kg": "",
+    "total_error_pct": ""
+  }
+  </script>
+</body>
+</html>

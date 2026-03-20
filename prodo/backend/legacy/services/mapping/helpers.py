@@ -355,10 +355,11 @@ def execute_token_query_df(
     # Apply date filter if available
     if date_column_name and start_date and end_date and date_column_name in df.columns:
         try:
-            from backend.app.services.reports.discovery_excel import _coerce_datetime_series, _parse_date_like
+            from backend.app.services.reports.discovery_excel import _coerce_datetime_series, _parse_date_like, _snap_end_of_day
             start_dt = _parse_date_like(start_date)
             end_dt = _parse_date_like(end_date)
             if start_dt and end_dt:
+                end_dt = _snap_end_of_day(end_dt)
                 dt_series = _coerce_datetime_series(filtered[date_column_name])
                 mask = (dt_series >= start_dt) & (dt_series <= end_dt)
                 date_filtered = filtered.loc[mask.fillna(False)]
@@ -397,8 +398,12 @@ def execute_token_query(
     if date_column_name and ident_re.match(date_column_name):
         quoted_date_column = f'"{date_column_name}"'
         if start_date and end_date:
+            # Snap date-only end_date to end-of-day so "2025-10-04" includes the whole day
+            _end = end_date
+            if isinstance(_end, str) and len(_end.strip()) == 10:
+                _end = _end.strip() + " 23:59:59"
             conditions.append(f"{quoted_date_column} BETWEEN ? AND ?")
-            params.extend([start_date, end_date])
+            params.extend([start_date, _end])
         elif start_date:
             conditions.append(f"{quoted_date_column} >= ?")
             params.append(start_date)

@@ -1,0 +1,67 @@
+[
+  {
+    "header": "row_column_1",
+    "placeholder": "{row_column_1}",
+    "mapping": "neuract__TEMPERATURES.timestamp_utc"
+  },
+  {
+    "header": "row_column_2",
+    "placeholder": "{row_column_2}",
+    "mapping": "neuract__TEMPERATURES.M1A_2_PT100_PV"
+  },
+  {
+    "header": "row_column_3",
+    "placeholder": "{row_column_3}",
+    "mapping": "neuract__TEMPERATURES.M1A_3_PT100_PV"
+  },
+  {
+    "header": "row_column_4",
+    "placeholder": "{row_column_4}",
+    "mapping": "neuract__TEMPERATURES.P3A_PT100_PV"
+  },
+  {
+    "header": "row_column_5",
+    "placeholder": "{row_column_5}",
+    "mapping": "neuract__TEMPERATURES.P4A_PT100_PV"
+  },
+  {
+    "header": "row_column_6",
+    "placeholder": "{row_column_6}",
+    "mapping": "neuract__TEMPERATURES.P5A_PT100_PV"
+  },
+  {
+    "header": "row_costal_feeds",
+    "placeholder": "{row_costal_feeds}",
+    "mapping": "neuract__TEMPERATURES.P6A_PT100_PV"
+  },
+  {
+    "header": "row_column_8",
+    "placeholder": "{row_column_8}",
+    "mapping": "neuract__TEMPERATURES.P8A_PT100_PV"
+  },
+  {
+    "header": "row_column_9",
+    "placeholder": "{row_column_9}",
+    "mapping": "neuract__TEMPERATURES.P8A_3_PT100_PV"
+  },
+  {
+    "header": "row_column_10",
+    "placeholder": "{row_column_10}",
+    "mapping": "neuract__TEMPERATURES.P8A_4_PT100_PV"
+  },
+  {
+    "header": "row_column_11",
+    "placeholder": "{row_column_11}",
+    "mapping": "neuract__TEMPERATURES.P8A_DRY_OUT_PT100_PV"
+  },
+  {
+    "header": "row_column_12",
+    "placeholder": "{row_column_12}",
+    "mapping": "neuract__TEMPERATURES.P9A_DRY_OUT_PT100_PV"
+  },
+  {
+    "header": "row_column_13",
+    "placeholder": "{row_column_13}",
+    "mapping": "neuract__TEMPERATURES.ROOM_PT100_PV"
+  }
+]

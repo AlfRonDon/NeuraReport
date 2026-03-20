@@ -1,6 +1,6 @@
 /**
  * Playwright test: Upload all 10 template zips, run reports, screenshot results.
- * Usage: node test-10-templates.mjs
+ * Each template uses the correct DB connection and date range that has actual data.
  */
 import { chromium } from 'playwright'
 import { readFileSync } from 'fs'
@@ -10,84 +10,83 @@ const API = 'http://localhost:9070'
 const FRONTEND = 'http://localhost:9071'
 const RESULTS_DIR = '/home/rohith/desktop/NeuraReport/test-results'
 
-// Connection IDs
-const RECIPE_DB = 'c6e94c43-de32-48b2-9f58-e12a88e51bbd'     // recipe_log — has recipes table
-const SCALE2_DB = '9d849002-8a72-460c-bf83-4ee1b2a4f576'      // recipe_log Scale2 — has neuract__Scale2
-const TEST_COPY_DB = 'be2a5318-8a30-4f2c-bcc4-b2e283cb311a'   // test-Copy.db — has RUNHOURS, TEMPERATURES
-const STP_DB = '73e9d384-2697-46af-96b0-f130b43cce55'         // stp.db — has FM_TABLE, ANALYSER_TABLE
+// Connection IDs (verified paths):
+// c6e94c43 → recipe_log.sqlite3       (recipes: May-Nov 2025)
+// 9d849002 → recipe_log (1).sqlite3   (recipes: May 2025-Mar 2026, Scale2: Feb 26-27)
+// 73e9d384 → stp.db                   (FM_TABLE, ANALYSER: Feb 19-20)
+// be2a5318 → test-Copy.db             (RUNHOURS: Oct-Nov 2025, TEMPERATURES: Oct-Nov 2025)
+// 4e1d04c6 → topcon-Copy.db           (Flowmeters: Nov 2025-Mar 2026)
 
-// Date ranges matched to actual data in each database
 const TEMPLATES = [
   {
     name: 'd1fdde',
     zip: '/home/rohith/desktop/new reports/c5598348-4d89-445e-a2f9-43a3aa6382ee-d1fdde (1).zip',
-    connectionId: RECIPE_DB,        // recipes table
-    startDate: '2026-02-26',
-    endDate: '2026-03-04',
+    connectionId: 'c6e94c43-de32-48b2-9f58-e12a88e51bbd',  // recipe_log.sqlite3
+    startDate: '2025-10-01 08:00',
+    endDate: '2025-10-05 18:00',
   },
   {
     name: 'd1fdde_2',
     zip: '/home/rohith/desktop/new reports/c5598348-4d89-445e-a2f9-43a3aa6382ee-d1fdde_2 (1).zip',
-    connectionId: RECIPE_DB,
-    startDate: '2026-02-26',
-    endDate: '2026-03-04',
+    connectionId: 'c6e94c43-de32-48b2-9f58-e12a88e51bbd',
+    startDate: '2025-10-01 08:00',
+    endDate: '2025-10-05 18:00',
   },
   {
     name: 'af2ec4',
     zip: '/home/rohith/desktop/new reports/db3dcb43-65e5-4bb3-9740-c86bcd5d44c4-af2ec4 (1).zip',
-    connectionId: RECIPE_DB,
-    startDate: '2026-02-26',
-    endDate: '2026-03-04',
+    connectionId: 'c6e94c43-de32-48b2-9f58-e12a88e51bbd',
+    startDate: '2025-10-01 08:00',
+    endDate: '2025-10-05 18:00',
   },
   {
     name: 'machine_runtime',
     zip: '/home/rohith/desktop/new reports/c5598348-4d89-445e-a2f9-43a3aa6382ee-machine_runtime (1).zip',
-    connectionId: TEST_COPY_DB,     // neuract__RUNHOURS — Oct-Nov 2025
-    startDate: '2025-10-08',
-    endDate: '2025-10-10',
+    connectionId: 'be2a5318-8a30-4f2c-bcc4-b2e283cb311a',  // test-Copy.db
+    startDate: '2025-10-08 06:00',
+    endDate: '2025-10-10 22:00',
   },
   {
     name: 'temperature',
     zip: '/home/rohith/desktop/new reports/temperature report.zip',
-    connectionId: TEST_COPY_DB,     // neuract__TEMPERATURES — Oct-Nov 2025
-    startDate: '2025-10-08',
-    endDate: '2025-10-10',
+    connectionId: 'be2a5318-8a30-4f2c-bcc4-b2e283cb311a',  // test-Copy.db
+    startDate: '2025-10-08 06:00',
+    endDate: '2025-10-10 22:00',
   },
   {
     name: 'flowmeter',
     zip: '/home/rohith/desktop/new reports/flowmeter-table-datewise.zip',
-    connectionId: STP_DB,           // neuract__FM_TABLE — Feb 19-20 (closest match for Flowmeters)
-    startDate: '2026-02-19',
-    endDate: '2026-02-20',
-    note: 'Uses FM_TABLE; neuract__Flowmeters not available — will test discovery',
+    connectionId: '4e1d04c6-9e69-492d-87f8-381e32054594',  // topcon-Copy.db (has neuract__Flowmeters)
+    startDate: '2025-11-06 08:00',
+    endDate: '2025-11-08 20:00',
   },
   {
     name: 'recipe_batch',
     zip: '/home/rohith/desktop/new reports/recipe-batch-report-da31dc-pdf.zip',
-    connectionId: RECIPE_DB,
-    startDate: '2026-02-26',
-    endDate: '2026-03-04',
+    connectionId: 'c6e94c43-de32-48b2-9f58-e12a88e51bbd',
+    startDate: '2025-10-01 08:00',
+    endDate: '2025-10-05 18:00',
   },
   {
     name: 'scale2_batch',
     zip: '/home/rohith/desktop/new reports/scale2-batch-report-v2.zip',
-    connectionId: SCALE2_DB,
-    startDate: '2026-02-26',
-    endDate: '2026-02-27',
+    connectionId: '9d849002-8a72-460c-bf83-4ee1b2a4f576',  // recipe_log (1).sqlite3
+    startDate: '2026-02-26 11:00',
+    endDate: '2026-02-27 17:30',
   },
   {
     name: 'scale2_cons_per_batch',
     zip: '/home/rohith/desktop/new reports/scale2-consumption-per-batch.zip',
-    connectionId: SCALE2_DB,
-    startDate: '2026-02-26',
-    endDate: '2026-02-27',
+    connectionId: '9d849002-8a72-460c-bf83-4ee1b2a4f576',
+    startDate: '2026-02-26 11:00',
+    endDate: '2026-02-27 17:30',
   },
   {
     name: 'scale2_cons_report',
     zip: '/home/rohith/desktop/new reports/scale2-consumption-report.zip',
-    connectionId: SCALE2_DB,
-    startDate: '2026-02-26',
-    endDate: '2026-02-27',
+    connectionId: '9d849002-8a72-460c-bf83-4ee1b2a4f576',
+    startDate: '2026-02-26 11:00',
+    endDate: '2026-02-27 17:30',
   },
 ]
 
@@ -136,7 +135,6 @@ async function main() {
   for (const tpl of TEMPLATES) {
     console.log(`\n${'='.repeat(60)}`)
     console.log(`TESTING: ${tpl.name}`)
-    if (tpl.note) console.log(`  NOTE: ${tpl.note}`)
     console.log(`${'='.repeat(60)}`)
 
     const result = { name: tpl.name, upload: null, discover: null, run: null, error: null }
@@ -159,7 +157,7 @@ async function main() {
         console.log(`  OK Discovery: ${batchCount} batches, ${rowsTotal} rows`)
       } else {
         const errDetail = disc.data?.detail?.message || disc.data?.detail || ''
-        console.log(`  WARN Discovery failed (${disc.status}): ${String(errDetail).slice(0, 120)}`)
+        console.log(`  WARN Discovery (${disc.status}): ${String(errDetail).slice(0, 120)}`)
       }
 
       // 3. Run report
@@ -215,7 +213,7 @@ async function main() {
     const batches = r.discover?.batchCount ?? '?'
     const rows = r.discover?.rowsTotal ?? '?'
     const detail = r.error ? ` -- ${r.error.slice(0, 80)}` : ''
-    console.log(`  ${icon}  ${r.name.padEnd(25)} batches=${String(batches).padEnd(5)} rows=${rows}${detail}`)
+    console.log(`  ${icon}  ${r.name.padEnd(25)} batches=${String(batches).padEnd(6)} rows=${rows}${detail}`)
   }
 
   const passed = results.filter(r => r.run?.ok).length

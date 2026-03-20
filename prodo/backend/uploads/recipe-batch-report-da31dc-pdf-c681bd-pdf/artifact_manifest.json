@@ -1,0 +1,28 @@
+{
+  "correlation_id": null,
+  "file_checksums": {
+    "filled_1772663011.html": "159fe4e41c1ccf40f04dbd93a981959e8562f630d8954e0da724a11eb40d09ce",
+    "filled_1772663011.pdf": "47986eb6d9742b7a51fceba0a7a6c36fa1200c26683d7f601e2b370cea8a076a",
+    "filled_1772664620.html": "fad7cb45c761c252de7358fe073b56357e563ef07024b8d3017aa63935c7b633",
+    "filled_1772664620.pdf": "695f8a159dd51855b6bbfa43a6cd2be103fdb1414dbd9ec519819e22bc6e8e5c",
+    "filled_1774002569.html": "84f254ee85c0c092122320b59fdb83d474f12bb600eaa0873eed7da8fe80f982",
+    "filled_1774002569.pdf": "d01affb386328e9208a90fdade54c51187293092d20fdbb3dc5c177d71535c05"
+  },
+  "files": {
+    "filled_1772663011.html": "filled_1772663011.html",
+    "filled_1772663011.pdf": "filled_1772663011.pdf",
+    "filled_1772664620.html": "filled_1772664620.html",
+    "filled_1772664620.pdf": "filled_1772664620.pdf",
+    "filled_1774002569.html": "filled_1774002569.html",
+    "filled_1774002569.pdf": "filled_1774002569.pdf"
+  },
+  "input_refs": [
+    "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/recipe-batch-report-da31dc-pdf/contract.json",
+    "/home/rohith/desktop/NeuraReport/recipe_log.sqlite3",
+    "/home/rohith/desktop/NeuraReport/prodo/backend/uploads/recipe-batch-report-da31dc-pdf-c681bd-pdf/contract.json"
+  ],
+  "pid": 863353,
+  "produced_at": "2026-03-20T10:29:29.612077+00:00",
+  "schema_version": "1.0",
+  "step": "reports_run"
+}

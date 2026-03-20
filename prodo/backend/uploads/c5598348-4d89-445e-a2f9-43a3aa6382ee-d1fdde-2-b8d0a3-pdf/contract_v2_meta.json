@@ -1,0 +1,147 @@
+{
+  "prompt_version": "llm_call_4_v2",
+  "model": "gpt-5",
+  "input_signature": "fb62da9f66bfdcd91055e0d72263f29e8540c7f2b1872234cd5bd7dc47fc3560",
+  "db_signature": "9a6ca65e35134679d2e6985dc9358bf8d45afb3735857fe8ed9e1c051f35c967",
+  "page_summary_sha256": "2e6fc6bd13a628cac3338f45030ceefc9c8f523e07d10f2060ba33625c1d0577",
+  "generated_at": 1762928463,
+  "assumptions": [
+    "recipes.start_time is stored in local time and can be compared via DATE().",
+    "recipe_name uniquely identifies a recipe code for filtering within the selected date range.",
+    "Only bin1..bin12 columns contain material rows; empty bin labels should be suppressed."
+  ],
+  "warnings": [],
+  "validation": {
+    "unknown_tokens": [],
+    "unknown_columns": [],
+    "token_coverage": {
+      "scalars_mapped_pct": 0,
+      "row_tokens_mapped_pct": 0,
+      "totals_mapped_pct": 0
+    }
+  },
+  "overview_path": "overview.md",
+  "step5_requirements_path": "step5_requirements.json",
+  "contract_payload": {
+    "tokens": {
+      "scalars": [
+        "print_date",
+        "date_from",
+        "date_to",
+        "recipe_code"
+      ],
+      "row_tokens": [
+        "row_sl_no",
+        "row_recipe_code",
+        "row_material_name",
+        "row_set_wt_kg",
+        "row_ach_wt_kg",
+        "row_error_kg",
+        "row_error_pct"
+      ],
+      "totals": [
+        "total_set_wt",
+        "total_ach_wt",
+        "total_error_kg",
+        "total_error_pct"
+      ]
+    },
+    "mapping": {
+      "print_date": "PARAM:print_date",
+      "date_from": "PARAM:from_date",
+      "date_to": "PARAM:to_date",
+      "recipe_code": "PARAM:recipe_code",
+      "row_sl_no": "rows.row_sl_no",
+      "row_recipe_code": "rows.row_recipe_code",
+      "row_material_name": "rows.row_material_name",
+      "row_set_wt_kg": "rows.row_set_wt_kg",
+      "row_ach_wt_kg": "rows.row_ach_wt_kg",
+      "row_error_kg": "rows.row_error_kg",
+      "row_error_pct": "rows.row_error_pct",
+      "total_set_wt": "totals.total_set_wt",
+      "total_ach_wt": "totals.total_ach_wt",
+      "total_error_kg": "totals.total_error_kg",
+      "total_error_pct": "totals.total_error_pct"
+    },
+    "join": {
+      "parent_table": "recipes",
+      "parent_key": "id",
+      "child_table": "",
+      "child_key": ""
+    },
+    "date_columns": {
+      "recipes": "start_time"
+    },
+    "filters": {
+      "optional": {
+        "recipe_code": "recipes.recipe_name"
+      }
+    },
+    "reshape_rules": [
+      {
+        "purpose": "Rows",
+        "columns": [
+          {
+            "as": "row_sl_no"
+          },
+          {
+            "as": "row_recipe_code"
+          },
+          {
+            "as": "row_material_name"
+          },
+          {
+            "as": "row_set_wt_kg"
+          },
+          {
+            "as": "row_ach_wt_kg"
+          },
+          {
+            "as": "row_error_kg"
+          },
+          {
+            "as": "row_error_pct"
+          }
+        ],
+        "strategy": "NONE"
+      }
+    ],
+    "row_computed": {},
+    "totals_math": {},
+    "formatters": {},
+    "order_by": {
+      "rows": [
+        "row_recipe_code ASC",
+        "row_sl_no ASC"
+      ]
+    },
+    "header_tokens": [
+      "print_date",
+      "date_from",
+      "date_to",
+      "recipe_code"
+    ],
+    "row_tokens": [
+      "row_sl_no",
+      "row_recipe_code",
+      "row_material_name",
+      "row_set_wt_kg",
+      "row_ach_wt_kg",
+      "row_error_kg",
+      "row_error_pct"
+    ],
+    "totals": {
+      "total_set_wt": "totals.total_set_wt",
+      "total_ach_wt": "totals.total_ach_wt",
+      "total_error_kg": "totals.total_error_kg",
+      "total_error_pct": "totals.total_error_pct"
+    },
+    "row_order": [
+      "row_recipe_code ASC",
+      "row_sl_no ASC"
+    ],
+    "literals": {}
+  },
+    "key_tokens": ["row_recipe_code"]
+}
+
