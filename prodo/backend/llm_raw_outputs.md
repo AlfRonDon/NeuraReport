@@ -8035,3 +8035,75 @@
 }
 ```
 
+## 2026-03-29T17:46:28+00:00Z - template_fix_html_call2
+
+```json
+{
+  "id": "claude-cli-1774806388",
+  "model": "claude-qwen",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": ""
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 505,
+    "completion_tokens": 0,
+    "total_tokens": 505
+  }
+}
+```
+
+## 2026-03-29T17:48:23+00:00Z - template_initial_html
+
+```json
+{
+  "id": "claude-cli-1774806503",
+  "model": "claude-sonnet",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": ""
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1233,
+    "completion_tokens": 0,
+    "total_tokens": 1233
+  }
+}
+```
+
+## 2026-03-29T17:48:29+00:00Z - template_fix_html_call2
+
+```json
+{
+  "id": "claude-cli-1774806509",
+  "model": "claude-sonnet",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": ""
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 505,
+    "completion_tokens": 0,
+    "total_tokens": 505
+  }
+}
+```
+
