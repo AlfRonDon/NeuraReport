@@ -7486,3 +7486,552 @@
 }
 ```
 
+## 2026-03-28T13:51:36+00:00Z - template_chat_create_v1
+
+```json
+{
+  "id": "claude-cli-1774705896",
+  "model": "claude-sonnet",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"message\": \"Got it \u2014 a temperatures report with timestamp and sensor readings. Before I generate, I have a few quick questions to make sure the template is right:\\n\\n1. Is M1A_2_PT100_PV the only sensor column, or will there be more (e.g. M1A_3_PT100_PV, M1B_...)?\\n2. What's the unit for the temperature values \u2014 \u00b0C, \u00b0F, or K?\\n3. Should the report have a header section with a title, date range, or machine/site name?\\n4. Any color/branding preferences, or is a clean neutral style fine?\", \"ready_to_apply\": false, \"proposed_changes\": null, \"follow_up_questions\": [\"How many sensor columns total?\", \"Temperature unit?\", \"Header fields needed?\", \"Color/branding preferences?\"], \"updated_html\": null}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1310,
+    "completion_tokens": 175,
+    "total_tokens": 1485
+  }
+}
+```
+
+## 2026-03-28T13:54:34+00:00Z - template_chat_create_v1
+
+```json
+{
+  "id": "claude-cli-1774706074",
+  "model": "claude-sonnet",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "```json\n{\"message\": \"Great \u2014 I have a good picture of this report. Let me confirm my understanding and ask a couple of quick questions before I generate.\\n\\n**What I have so far:**\\n- **Company:** Coastal Ceramics (factory temperature monitoring)\\n- **Layout:** Portrait A4, blue theme\\n- **Header:** Date range (e.g. \\\"From: 2026-03-01  To: 2026-03-28\\\")\\n- **Data:** One row per timestamp, 12 sensor columns:\\n  `timestamp_utc`, `M1A_2_PT100_PV`, `M1A_3_PT100_PV`, `P3A_PT100_PV`, `P4A_PT100_PV`, `P5A_PT100_PV`, `P6A_PT100_PV`, `P8A_3_PT100_PV`, `P8A_4_PT100_PV`, `P8A_DRY_OUT_PT100_PV`, `P8A_PT100_PV`, `P9A_DRY_OUT_PT100_PV`, `ROOM_PT100_PV`\\n- **Tokens:** Exact column names used as-is\\n\\n**A few quick questions:**\\n\\n1. Should the table show **raw readings row by row** (one row per timestamp), or do you also want a **summary section** (min/max/avg per sensor)?\\n2. Do you have a **company logo** to include in the header, or just the company name as text?\\n3. Should temperature values show a **unit** (e.g. \u00b0C) in the column headers or next to each value?\", \"ready_to_apply\": false, \"proposed_changes\": null, \"follow_up_questions\": [\"Raw readings only or also a min/max/avg summary section?\", \"Company logo in the header or text only?\", \"Show \u00b0C unit in headers or values?\"], \"updated_html\": null}\n```"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1375,
+    "completion_tokens": 328,
+    "total_tokens": 1703
+  }
+}
+```
+
+## 2026-03-28T13:55:26+00:00Z - template_chat_create_v1
+
+```json
+{
+  "id": "claude-cli-1774706126",
+  "model": "claude-sonnet",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"message\": \"Here is your Temperature Report template for Coastal Ceramics. It includes a blue header with company name, report title, and date range; a 13-column table (timestamp + 12 sensors) with alternating row shading; and a footer with generation timestamp. Token names use lowercase versions of your sensor column names with the `row_` prefix.\", \"ready_to_apply\": true, \"proposed_changes\": [\"Blue header: company name ({company_name}), report title ({report_title}), date range ({start_date} to {end_date})\", \"13-column sensor table: timestamp + all 12 PT100 sensors\", \"Row tokens match exact sensor names (lowercased): row_timestamp_utc, row_m1a_2_pt100_pv \u2026 row_room_pt100_pv\", \"Alternating blue/white row shading with borders\", \"Footer with generated_at timestamp\", \"All temperatures labeled \u00b0C\"], \"follow_up_questions\": null, \"updated_html\": \"<!DOCTYPE html>\\n<html lang=\\\"en\\\">\\n<head>\\n  <meta charset=\\\"UTF-8\\\">\\n  <title>Temperature Report</title>\\n  <style>\\n    @page { size: A4 portrait; margin: 12mm 10mm; }\\n    * { box-sizing: border-box; margin: 0; padding: 0; }\\n    body { font-family: Arial, sans-serif; font-size: 8pt; color: #1a1a2e; background: #fff; }\\n    .header { background: #1a3a6b; color: #fff; padding: 14px 18px; margin-bottom: 12px; border-radius: 4px; }\\n    .header-top { display: flex; justify-content: space-between; align-items: flex-start; }\\n    .company-name { font-size: 16pt; font-weight: bold; letter-spacing: 0.4px; }\\n    .report-title { font-size: 10pt; opacity: 0.85; margin-top: 4px; }\\n    .date-range { text-align: right; font-size: 9pt; line-height: 1.7; }\\n    .date-range .label { font-size: 7.5pt; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.5px; }\\n    .unit-note { font-size: 7.5pt; color: #4a6a9a; margin-bottom: 8px; font-style: italic; }\\n    table { width: 100%; border-collapse: collapse; font-size: 7pt; table-layout: fixed; }\\n    col.ts-col { width: 108px; }\\n    col.sensor-col { width: auto; }\\n    thead tr { background: #1a3a6b; color: #fff; }\\n    thead th { padding: 5px 3px; text-align: center; border: 1px solid #0d2a52; font-weight: bold; font-size: 6.5pt; line-height: 1.35; vertical-align: bottom; word-break: break-word; }\\n    thead th.ts-header { text-align: left; }\\n    tbody tr:nth-child(even) { background: #edf3fb; }\\n    tbody tr:nth-child(odd) { background: #fff; }\\n    tbody td { padding: 4px 3px; border: 1px solid #c5d5ea; text-align: center; vertical-align: middle; }\\n    tbody td.ts-cell { text-align: left; font-family: monospace; font-size: 6.5pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\\n    .footer { margin-top: 14px; border-top: 2px solid #1a3a6b; padding-top: 6px; display: flex; justify-content: space-between; font-size: 7pt; color: #666; }\\n  </style>\\n</head>\\n<body>\\n\\n  <div class=\\\"header\\\">\\n    <div class=\\\"header-top\\\">\\n      <div>\\n        <div class=\\\"company-name\\\">{company_name}</div>\\n        <div class=\\\"report-title\\\">{report_title}</div>\\n      </div>\\n      <div class=\\\"date-range\\\">\\n        <div class=\\\"label\\\">Date Range</div>\\n        <div>{start_date} &mdash; {end_date}</div>\\n      </div>\\n    </div>\\n  </div>\\n\\n  <div class=\\\"unit-note\\\">All temperature readings in &deg;C</div>\\n\\n  <table>\\n    <colgroup>\\n      <col class=\\\"ts-col\\\">\\n      <col class=\\\"sensor-col\\\"><col class=\\\"sensor-col\\\"><col class=\\\"sensor-col\\\">\\n      <col class=\\\"sensor-col\\\"><col class=\\\"sensor-col\\\"><col class=\\\"sensor-col\\\">\\n      <col class=\\\"sensor-col\\\"><col class=\\\"sensor-col\\\"><col class=\\\"sensor-col\\\">\\n      <col class=\\\"sensor-col\\\"><col class=\\\"sensor-col\\\"><col class=\\\"sensor-col\\\">\\n    </colgroup>\\n    <thead>\\n      <tr>\\n        <th class=\\\"ts-header\\\">Timestamp (UTC)</th>\\n        <th>M1A_2<br>PT100</th>\\n        <th>M1A_3<br>PT100</th>\\n        <th>P3A<br>PT100</th>\\n        <th>P4A<br>PT100</th>\\n        <th>P5A<br>PT100</th>\\n        <th>P6A<br>PT100</th>\\n        <th>P8A_3<br>PT100</th>\\n        <th>P8A_4<br>PT100</th>\\n        <th>P8A<br>DRY OUT</th>\\n        <th>P8A<br>PT100</th>\\n        <th>P9A<br>DRY OUT</th>\\n        <th>ROOM<br>PT100</th>\\n      </tr>\\n    </thead>\\n    <tbody>\\n      <!-- BEGIN:BLOCK_REPEAT sensor_readings -->\\n      <tr>\\n        <td class=\\\"ts-cell\\\">{row_timestamp_utc}</td>\\n        <td>{row_m1a_2_pt100_pv}</td>\\n        <td>{row_m1a_3_pt100_pv}</td>\\n        <td>{row_p3a_pt100_pv}</td>\\n        <td>{row_p4a_pt100_pv}</td>\\n        <td>{row_p5a_pt100_pv}</td>\\n        <td>{row_p6a_pt100_pv}</td>\\n        <td>{row_p8a_3_pt100_pv}</td>\\n        <td>{row_p8a_4_pt100_pv}</td>\\n        <td>{row_p8a_dry_out_pt100_pv}</td>\\n        <td>{row_p8a_pt100_pv}</td>\\n        <td>{row_p9a_dry_out_pt100_pv}</td>\\n        <td>{row_room_pt100_pv}</td>\\n      </tr>\\n      <!-- END:BLOCK_REPEAT -->\\n    </tbody>\\n  </table>\\n\\n  <div class=\\\"footer\\\">\\n    <span>{company_name} &mdash; Temperature Monitoring</span>\\n    <span>Generated: {generated_at}</span>\\n  </div>\\n\\n</body>\\n</html>\"}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1718,
+    "completion_tokens": 1253,
+    "total_tokens": 2971
+  }
+}
+```
+
+## 2026-03-28T13:56:09+00:00Z - llm_call_3_df_v2
+
+```json
+{
+  "id": "claude-cli-1774706169",
+  "model": "claude-sonnet",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\n  \"mapping\": {\n    \"start_date\": \"To Be Selected...\",\n    \"end_date\": \"To Be Selected...\",\n    \"generated_at\": \"UNRESOLVED\",\n    \"row_timestamp_utc\": \"UNRESOLVED\",\n    \"row_m1a_2_pt100_pv\": \"UNRESOLVED\",\n    \"row_m1a_3_pt100_pv\": \"UNRESOLVED\",\n    \"row_p3a_pt100_pv\": \"UNRESOLVED\",\n    \"row_p4a_pt100_pv\": \"UNRESOLVED\",\n    \"row_p5a_pt100_pv\": \"UNRESOLVED\",\n    \"row_p6a_pt100_pv\": \"UNRESOLVED\",\n    \"row_p8a_3_pt100_pv\": \"UNRESOLVED\",\n    \"row_p8a_4_pt100_pv\": \"UNRESOLVED\",\n    \"row_p8a_dry_out_pt100_pv\": \"UNRESOLVED\",\n    \"row_p8a_pt100_pv\": \"UNRESOLVED\",\n    \"row_p9a_dry_out_pt100_pv\": \"UNRESOLVED\",\n    \"row_room_pt100_pv\": \"UNRESOLVED\"\n  },\n  \"token_samples\": {\n    \"company_name\": \"NOT_VISIBLE\",\n    \"report_title\": \"Temperature Report\",\n    \"start_date\": \"NOT_VISIBLE\",\n    \"end_date\": \"NOT_VISIBLE\",\n    \"generated_at\": \"NOT_VISIBLE\",\n    \"row_timestamp_utc\": \"NOT_VISIBLE\",\n    \"row_m1a_2_pt100_pv\": \"NOT_VISIBLE\",\n    \"row_m1a_3_pt100_pv\": \"NOT_VISIBLE\",\n    \"row_p3a_pt100_pv\": \"NOT_VISIBLE\",\n    \"row_p4a_pt100_pv\": \"NOT_VISIBLE\",\n    \"row_p5a_pt100_pv\": \"NOT_VISIBLE\",\n    \"row_p6a_pt100_pv\": \"NOT_VISIBLE\",\n    \"row_p8a_3_pt100_pv\": \"NOT_VISIBLE\",\n    \"row_p8a_4_pt100_pv\": \"NOT_VISIBLE\",\n    \"row_p8a_dry_out_pt100_pv\": \"NOT_VISIBLE\",\n    \"row_p8a_pt100_pv\": \"NOT_VISIBLE\",\n    \"row_p9a_dry_out_pt100_pv\": \"NOT_VISIBLE\",\n    \"row_room_pt100_pv\": \"NOT_VISIBLE\"\n  },\n  \"meta\": {\n    \"unresolved\": [\n      \"generated_at\",\n      \"row_timestamp_utc\",\n      \"row_m1a_2_pt100_pv\",\n      \"row_m1a_3_pt100_pv\",\n      \"row_p3a_pt100_pv\",\n      \"row_p4a_pt100_pv\",\n      \"row_p5a_pt100_pv\",\n      \"row_p6a_pt100_pv\",\n      \"row_p8a_3_pt100_pv\",\n      \"row_p8a_4_pt100_pv\",\n      \"row_p8a_dry_out_pt100_pv\",\n      \"row_p8a_pt100_pv\",\n      \"row_p9a_dry_out_pt100_pv\",\n      \"row_room_pt100_pv\"\n    ],\n    \"hints\": {\n      \"generated_at\": {\n        \"op\": \"FORMAT\",\n        \"columns\": [],\n        \"note\": \"Runtime-generated timestamp; not sourced from catalog. Inject at report generation time (e.g. datetime.utcnow().isoformat()).\"\n      },\n      \"row_timestamp_utc\": {\n        \"op\": \"IDENTITY\",\n        \"columns\": [],\n        \"note\": \"Catalog contains no temperature sensor data. This template requires a sensor_readings table with a UTC timestamp column. The closest catalog column (transactions.access_timestamp) is unrelated (payment system).\"\n      },\n      \"row_m1a_2_pt100_pv\": {\n        \"op\": \"IDENTITY\",\n        \"columns\": [],\n        \"note\": \"PT100 sensor PV reading for sensor M1A_2. No matching column in catalog \u2014 catalog covers consumer payments, not temperature sensors. Requires a dedicated sensor_readings table.\"\n      },\n      \"row_m1a_3_pt100_pv\": {\n        \"op\": \"IDENTITY\",\n        \"columns\": [],\n        \"note\": \"PT100 sensor PV reading for sensor M1A_3. No matching column in catalog.\"\n      },\n      \"row_p3a_pt100_pv\": {\n        \"op\": \"IDENTITY\",\n        \"columns\": [],\n        \"note\": \"PT100 sensor PV reading for sensor P3A. No matching column in catalog.\"\n      },\n      \"row_p4a_pt100_pv\": {\n        \"op\": \"IDENTITY\",\n        \"columns\": [],\n        \"note\": \"PT100 sensor PV reading for sensor P4A. No matching column in catalog.\"\n      },\n      \"row_p5a_pt100_pv\": {\n        \"op\": \"IDENTITY\",\n        \"columns\": [],\n        \"note\": \"PT100 sensor PV reading for sensor P5A. No matching column in catalog.\"\n      },\n      \"row_p6a_pt100_pv\": {\n        \"op\": \"IDENTITY\",\n        \"columns\": [],\n        \"note\": \"PT100 sensor PV reading for sensor P6A. No matching column in catalog.\"\n      },\n      \"row_p8a_3_pt100_pv\": {\n        \"op\": \"IDENTITY\",\n        \"columns\": [],\n        \"note\": \"PT100 sensor PV reading for sensor P8A_3. No matching column in catalog.\"\n      },\n      \"row_p8a_4_pt100_pv\": {\n        \"op\": \"IDENTITY\",\n        \"columns\": [],\n        \"note\": \"PT100 sensor PV reading for sensor P8A_4. No matching column in catalog.\"\n      },\n      \"row_p8a_dry_out_pt100_pv\": {\n        \"op\": \"IDENTITY\",\n        \"columns\": [],\n        \"note\": \"DRY OUT PT100 sensor PV reading for sensor P8A. No matching column in catalog.\"\n      },\n      \"row_p8a_pt100_pv\": {\n        \"op\": \"IDENTITY\",\n        \"columns\": [],\n        \"note\": \"PT100 sensor PV reading for sensor P8A. No matching column in catalog.\"\n      },\n      \"row_p9a_dry_out_pt100_pv\": {\n        \"op\": \"IDENTITY\",\n        \"columns\": [],\n        \"note\": \"DRY OUT PT100 sensor PV reading for sensor P9A. No matching column in catalog.\"\n      },\n      \"row_room_pt100_pv\": {\n        \"op\": \"IDENTITY\",\n        \"columns\": [],\n        \"note\": \"ROOM PT100 sensor PV reading. No matching column in catalog.\"\n      },\n      \"_catalog_mismatch\": {\n        \"note\": \"CRITICAL: The provided catalog (consumers, transactions) is a consumer payment system. This template is a temperature sensor monitoring report. None of the 12 sensor columns nor the UTC timestamp column exist in the catalog. All row tokens and generated_at are UNRESOLVED. A sensor_readings table with columns for timestamp_utc and each sensor's PV value must be present in the catalog before any row token can be mapped.\"\n      }\n    },\n    \"constants\": {\n      \"company_name\": {\n        \"note\": \"Static branding token per reference PNG hint. Value not visible in HTML source; must be supplied as a run-time constant or params.company_name.\"\n      },\n      \"report_title\": {\n        \"value\": \"Temperature Report\",\n        \"note\": \"Static page title inferred from <title> tag and template context. Treated as a constant per reference PNG hint.\"\n      }\n    }\n  }\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 2418,
+    "completion_tokens": 1379,
+    "total_tokens": 3797
+  }
+}
+```
+
+## 2026-03-28T13:57:50+00:00Z - v3_df
+
+```json
+{
+  "id": "claude-cli-1774706270",
+  "model": "claude-sonnet",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\n  \"overview_md\": \"# Temperature Report \u2014 Contract Overview\\n\\n## Executive Summary\\nThis report renders timestamped PT100 and DRY-OUT temperature sensor readings for up to 12 named sensor channels across a user-defined date range. The current catalog (tables: `consumers`, `transactions`) is a **consumer payment system** and contains **no temperature sensor data**. All 13 row tokens and the UTC timestamp token are UNRESOLVED pending the addition of a `sensor_readings` table to the database. Five scalar tokens (company_name, report_title, start_date, end_date, generated_at) are resolved as runtime parameters.\\n\\n## Token Inventory\\n| Token | Type | Resolution |\\n|---|---|---|\\n| company_name | scalar | PARAM:company_name |\\n| report_title | scalar | PARAM:report_title |\\n| start_date | scalar | PARAM:start_date |\\n| end_date | scalar | PARAM:end_date |\\n| generated_at | scalar | PARAM:generated_at |\\n| row_timestamp_utc | row | UNRESOLVED (needs sensor_readings.timestamp_utc) |\\n| row_m1a_2_pt100_pv | row | UNRESOLVED (needs sensor_readings.m1a_2_pt100_pv) |\\n| row_m1a_3_pt100_pv | row | UNRESOLVED (needs sensor_readings.m1a_3_pt100_pv) |\\n| row_p3a_pt100_pv | row | UNRESOLVED (needs sensor_readings.p3a_pt100_pv) |\\n| row_p4a_pt100_pv | row | UNRESOLVED (needs sensor_readings.p4a_pt100_pv) |\\n| row_p5a_pt100_pv | row | UNRESOLVED (needs sensor_readings.p5a_pt100_pv) |\\n| row_p6a_pt100_pv | row | UNRESOLVED (needs sensor_readings.p6a_pt100_pv) |\\n| row_p8a_3_pt100_pv | row | UNRESOLVED (needs sensor_readings.p8a_3_pt100_pv) |\\n| row_p8a_4_pt100_pv | row | UNRESOLVED (needs sensor_readings.p8a_4_pt100_pv) |\\n| row_p8a_dry_out_pt100_pv | row | UNRESOLVED (needs sensor_readings.p8a_dry_out_pt100_pv) |\\n| row_p8a_pt100_pv | row | UNRESOLVED (needs sensor_readings.p8a_pt100_pv) |\\n| row_p9a_dry_out_pt100_pv | row | UNRESOLVED (needs sensor_readings.p9a_dry_out_pt100_pv) |\\n| row_room_pt100_pv | row | UNRESOLVED (needs sensor_readings.room_pt100_pv) |\\n\\n## Join & Date Rules\\n- **Required table**: `sensor_readings` (not present in current catalog)\\n- **Date filter column**: `sensor_readings.timestamp_utc`\\n- **Filter params**: `start_date` (date_from) and `end_date` (date_to) supplied by user at runtime\\n- **Ordering**: `timestamp_utc ASC`\\n\\n## Transformations\\n- `row_timestamp_utc` \u2192 format_date with `\\\"%d-%m-%Y %H:%M:%S\\\"` (display formatting)\\n- All 12 sensor PV values \u2192 `number(2)` display format (\u00b0C to 2 decimal places)\\n\\n## Parameters (all runtime-injected)\\n- `company_name` \u2014 organisation branding\\n- `report_title` \u2014 report heading (default: \\\"Temperature Report\\\")\\n- `start_date` / `end_date` \u2014 user-selected date range (ISO date strings)\\n- `generated_at` \u2014 report generation timestamp (UTC, injected at render time)\\n\\n## Critical Blocker\\nThe `sensor_readings` table must be created in the database with the following columns and then re-catalogued before any row token can be resolved:\\n`timestamp_utc` (TIMESTAMP), `m1a_2_pt100_pv` (FLOAT), `m1a_3_pt100_pv` (FLOAT), `p3a_pt100_pv` (FLOAT), `p4a_pt100_pv` (FLOAT), `p5a_pt100_pv` (FLOAT), `p6a_pt100_pv` (FLOAT), `p8a_3_pt100_pv` (FLOAT), `p8a_4_pt100_pv` (FLOAT), `p8a_dry_out_pt100_pv` (FLOAT), `p8a_pt100_pv` (FLOAT), `p9a_dry_out_pt100_pv` (FLOAT), `room_pt100_pv` (FLOAT).\",\n\n  \"step5_requirements\": {\n    \"datasets\": {\n      \"header\": {\n        \"description\": \"Single-row header dataset supplying branding, date range labels, and generation timestamp \u2014 all injected as runtime parameters at report render time.\",\n        \"columns\": [\"company_name\", \"report_title\", \"start_date\", \"end_date\", \"generated_at\"]\n      },\n      \"rows\": {\n        \"description\": \"One row per sensor_readings record within the user-specified date range. Each row contains a UTC timestamp and 12 temperature PV readings (\u00b0C). Ordered chronologically by timestamp_utc ASC.\",\n        \"columns\": [\"row_timestamp_utc\", \"row_m1a_2_pt100_pv\", \"row_m1a_3_pt100_pv\", \"row_p3a_pt100_pv\", \"row_p4a_pt100_pv\", \"row_p5a_pt100_pv\", \"row_p6a_pt100_pv\", \"row_p8a_3_pt100_pv\", \"row_p8a_4_pt100_pv\", \"row_p8a_dry_out_pt100_pv\", \"row_p8a_pt100_pv\", \"row_p9a_dry_out_pt100_pv\", \"row_room_pt100_pv\"],\n        \"grouping\": [],\n        \"ordering\": [\"timestamp_utc ASC\"]\n      },\n      \"totals\": {\n        \"description\": \"No totals section present in this template.\",\n        \"columns\": []\n      }\n    },\n    \"semantics\": \"start_date and end_date are date-range filters applied to sensor_readings.timestamp_utc \u2014 they narrow the result set to the requested monitoring window. company_name, report_title, and generated_at are pure pass-through display parameters that do not affect data filtering.\",\n    \"parameters\": {\n      \"required\": [\n        {\"name\": \"start_date\", \"type\": \"date\"},\n        {\"name\": \"end_date\", \"type\": \"date\"}\n      ],\n      \"optional\": [\n        {\"name\": \"company_name\", \"type\": \"string\"},\n        {\"name\": \"report_title\", \"type\": \"string\"},\n        {\"name\": \"generated_at\", \"type\": \"string\"}\n      ]\n    },\n    \"transformations\": [\n      \"No reshape required \u2014 sensor_readings is a wide table with one column per sensor channel, read directly.\",\n      \"row_timestamp_utc formatted from raw timestamp to DD-MM-YYYY HH:MM:SS display string via format_date.\",\n      \"All 12 sensor PV columns formatted to 2 decimal places for display.\"\n    ]\n  },\n\n  \"contract\": {\n    \"tokens\": {\n      \"scalars\": [\"company_name\", \"end_date\", \"generated_at\", \"report_title\", \"start_date\"],\n      \"row_tokens\": [\"row_m1a_2_pt100_pv\", \"row_m1a_3_pt100_pv\", \"row_p3a_pt100_pv\", \"row_p4a_pt100_pv\", \"row_p5a_pt100_pv\", \"row_p6a_pt100_pv\", \"row_p8a_3_pt100_pv\", \"row_p8a_4_pt100_pv\", \"row_p8a_dry_out_pt100_pv\", \"row_p8a_pt100_pv\", \"row_p9a_dry_out_pt100_pv\", \"row_room_pt100_pv\", \"row_timestamp_utc\"],\n      \"totals\": []\n    },\n    \"mapping\": {\n      \"company_name\": \"PARAM:company_name\",\n      \"end_date\": \"PARAM:end_date\",\n      \"generated_at\": \"PARAM:generated_at\",\n      \"report_title\": \"PARAM:report_title\",\n      \"start_date\": \"PARAM:start_date\",\n      \"row_timestamp_utc\": \"UNRESOLVED\",\n      \"row_m1a_2_pt100_pv\": \"UNRESOLVED\",\n      \"row_m1a_3_pt100_pv\": \"UNRESOLVED\",\n      \"row_p3a_pt100_pv\": \"UNRESOLVED\",\n      \"row_p4a_pt100_pv\": \"UNRESOLVED\",\n      \"row_p5a_pt100_pv\": \"UNRESOLVED\",\n      \"row_p6a_pt100_pv\": \"UNRESOLVED\",\n      \"row_p8a_3_pt100_pv\": \"UNRESOLVED\",\n      \"row_p8a_4_pt100_pv\": \"UNRESOLVED\",\n      \"row_p8a_dry_out_pt100_pv\": \"UNRESOLVED\",\n      \"row_p8a_pt100_pv\": \"UNRESOLVED\",\n      \"row_p9a_dry_out_pt100_pv\": \"UNRESOLVED\",\n      \"row_room_pt100_pv\": \"UNRESOLVED\"\n    },\n    \"unresolved\": [],\n    \"join\": {\n      \"parent_table\": \"sensor_readings\",\n      \"parent_key\": \"timestamp_utc\",\n      \"child_table\": \"sensor_readings\",\n      \"child_key\": \"timestamp_utc\"\n    },\n    \"date_columns\": {\n      \"sensor_readings\": \"timestamp_utc\"\n    },\n    \"filters\": {\n      \"optional\": {\n        \"date_from\": \"sensor_readings.timestamp_utc\",\n        \"date_to\": \"sensor_readings.timestamp_utc\"\n      }\n    },\n    \"reshape_rules\": [\n      {\n        \"purpose\": \"Direct wide-table read from sensor_readings, no unpivoting needed\",\n        \"strategy\": \"NONE\",\n        \"columns\": []\n      }\n    ],\n    \"row_computed\": {\n      \"row_timestamp_utc\": {\"op\": \"format_date\", \"column\": \"timestamp_utc\", \"format\": \"%d-%m-%Y %H:%M:%S\"}\n    },\n    \"totals_math\": {},\n    \"totals\": {},\n    \"formatters\": {\n      \"row_m1a_2_pt100_pv\": \"number(2)\",\n      \"row_m1a_3_pt100_pv\": \"number(2)\",\n      \"row_p3a_pt100_pv\": \"number(2)\",\n      \"row_p4a_pt100_pv\": \"number(2)\",\n      \"row_p5a_pt100_pv\": \"number(2)\",\n      \"row_p6a_pt100_pv\": \"number(2)\",\n      \"row_p8a_3_pt100_pv\": \"number(2)\",\n      \"row_p8a_4_pt100_pv\": \"number(2)\",\n      \"row_p8a_dry_out_pt100_pv\": \"number(2)\",\n      \"row_p8a_pt100_pv\": \"number(2)\",\n      \"row_p9a_dry_out_pt100_pv\": \"number(2)\",\n      \"row_room_pt100_pv\": \"number(2)\"\n    },\n    \"order_by\": {\n      \"rows\": [\"timestamp_utc ASC\"]\n    },\n    \"header_tokens\": [\"company_name\", \"end_date\", \"generated_at\", \"report_title\", \"start_date\"],\n    \"row_tokens\": [\"row_m1a_2_pt100_pv\", \"row_m1a_3_pt100_pv\", \"row_p3a_pt100_pv\", \"row_p4a_pt100_pv\", \"row_p5a_pt100_pv\", \"row_p6a_pt100_pv\", \"row_p8a_3_pt100_pv\", \"row_p8a_4_pt100_pv\", \"row_p8a_dry_out_pt100_pv\", \"row_p8a_pt100_pv\", \"row_p9a_dry_out_pt100_pv\", \"row_room_pt100_pv\", \"row_timestamp_utc\"],\n    \"row_order\": [\"timestamp_utc ASC\"],\n    \"literals\": {},\n    \"notes\": \"CATALOG MISMATCH \u2014 BLOCKER: Current catalog covers consumer payment tables only (consumers, transactions). This temperature monitoring report requires a sensor_readings table not present in the database. Required schema: sensor_readings(timestamp_utc TIMESTAMP PK, m1a_2_pt100_pv FLOAT, m1a_3_pt100_pv FLOAT, p3a_pt100_pv FLOAT, p4a_pt100_pv FLOAT, p5a_pt100_pv FLOAT, p6a_pt100_pv FLOAT, p8a_3_pt100_pv FLOAT, p8a_4_pt100_pv FLOAT, p8a_dry_out_pt100_pv FLOAT, p8a_pt100_pv FLOAT, p9a_dry_out_pt100_pv FLOAT, room_pt100_pv FLOAT). All 13 row tokens resolve to UNRESOLVED until this table is catalogued. Five scalar tokens are runtime PARAM injections. row_computed.format_date and number(2) formatters are pre-declared for when the table becomes available.\"\n  },\n\n  \"validation\": {\n    \"unknown_tokens\": [],\n    \"unknown_columns\": [],\n    \"token_coverage\": {\n      \"scalars_mapped_pct\": 100,\n      \"row_tokens_mapped_pct\": 100,\n      \"totals_mapped_pct\": 100\n    }\n  }\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 6884,
+    "completion_tokens": 2344,
+    "total_tokens": 9228
+  }
+}
+```
+
+## 2026-03-28T15:25:51+00:00Z - template_initial_html
+
+```json
+{
+  "id": "claude-cli-1774711551",
+  "model": "claude-sonnet",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "<!--BEGIN_HTML-->\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<title>Temperature Report</title>\n<style>\n  :root {\n    --col-datetime-w: 38mm;\n    --col-data-w: 18mm;\n    --col-room-w: 16mm;\n    --header-font-size: 14pt;\n    --sub-header-font-size: 10pt;\n    --table-font-size: 7pt;\n    --row-height: 5mm;\n    --row-gap: 0mm;\n  }\n\n  @page {\n    size: A4 landscape;\n    margin: 8mm 8mm 8mm 8mm;\n  }\n\n  * {\n    box-sizing: border-box;\n    margin: 0;\n    padding: 0;\n  }\n\n  body {\n    font-family: Arial, Helvetica, sans-serif;\n    font-size: var(--table-font-size);\n    background: #fff;\n    color: #000;\n  }\n\n  #report-header {\n    display: flex;\n    justify-content: space-between;\n    align-items: flex-start;\n    margin-bottom: 2mm;\n  }\n\n  .header-left .company-name {\n    font-size: var(--header-font-size);\n    font-weight: bold;\n    line-height: 1.2;\n  }\n\n  .header-left .report-title {\n    font-size: var(--sub-header-font-size);\n    font-weight: bold;\n    line-height: 1.3;\n  }\n\n  .header-right {\n    font-size: 8pt;\n    text-align: right;\n    padding-top: 1mm;\n  }\n\n  .sheet-name {\n    font-size: 8pt;\n    margin-bottom: 2mm;\n  }\n\n  #data-table {\n    width: 100%;\n    border-collapse: collapse;\n    table-layout: fixed;\n    font-size: var(--table-font-size);\n  }\n\n  #data-table th,\n  #data-table td {\n    border: 1px solid #000;\n    padding: 1px 2px;\n    text-align: center;\n    vertical-align: middle;\n    word-wrap: break-word;\n    line-height: 1.2;\n  }\n\n  #data-table thead tr th {\n    background-color: #fff;\n    font-weight: bold;\n    font-size: 6.5pt;\n    height: 9mm;\n    vertical-align: middle;\n  }\n\n  #data-table tbody tr td {\n    height: var(--row-height);\n    font-size: var(--table-font-size);\n  }\n\n  #data-table tbody tr td:first-child {\n    text-align: left;\n    padding-left: 2px;\n  }\n\n  #data-table colgroup col:nth-child(1)  { width: var(--col-datetime-w); }\n  #data-table colgroup col:nth-child(2)  { width: var(--col-data-w); }\n  #data-table colgroup col:nth-child(3)  { width: var(--col-data-w); }\n  #data-table colgroup col:nth-child(4)  { width: var(--col-data-w); }\n  #data-table colgroup col:nth-child(5)  { width: var(--col-data-w); }\n  #data-table colgroup col:nth-child(6)  { width: var(--col-data-w); }\n  #data-table colgroup col:nth-child(7)  { width: var(--col-data-w); }\n  #data-table colgroup col:nth-child(8)  { width: var(--col-data-w); }\n  #data-table colgroup col:nth-child(9)  { width: var(--col-data-w); }\n  #data-table colgroup col:nth-child(10) { width: var(--col-data-w); }\n  #data-table colgroup col:nth-child(11) { width: var(--col-data-w); }\n  #data-table colgroup col:nth-child(12) { width: var(--col-room-w); }\n</style>\n</head>\n<body>\n\n<div id=\"report-header\">\n  <div class=\"header-left\">\n    <div class=\"company-name\">{company_name}</div>\n    <div class=\"report-title\">{report_title}</div>\n  </div>\n  <div class=\"header-right\">Print Date : {print_date}</div>\n</div>\n\n<div class=\"sheet-name\">{sheet_name}</div>\n\n<table id=\"data-table\">\n  <colgroup>\n    <col><col><col><col><col><col>\n    <col><col><col><col><col><col>\n  </colgroup>\n  <thead>\n    <tr>\n      <th data-label=\"date_time\">DATE TIME</th>\n      <th data-label=\"m1a2_pt100\">M1A-2<br>PT100</th>\n      <th data-label=\"m1a3_pt100\">M1A-3<br>PT100</th>\n      <th data-label=\"p3a_pt100\">P3A<br>PT100</th>\n      <th data-label=\"p4a_pt100\">P4A<br>PT100</th>\n      <th data-label=\"p5a_pt100\">P5A<br>PT100</th>\n      <th data-label=\"p6a_pt100\">P6A<br>PT100</th>\n      <th data-label=\"p8a_pt100\">P8A<br>PT100</th>\n      <th data-label=\"p5a3_pt100\">P5A-3<br>PT100</th>\n      <th data-label=\"p5a4_pt100\">P5A-4<br>PT100</th>\n      <th data-label=\"p9a_dryout_pt100\">P9A<br>DRYOUT<br>PT100</th>\n      <th data-label=\"room_pt100\">ROOM<br>PT100</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <td>{row_date_time}</td>\n      <td>{row_m1a2_pt100}</td>\n      <td>{row_m1a3_pt100}</td>\n      <td>{row_p3a_pt100}</td>\n      <td>{row_p4a_pt100}</td>\n      <td>{row_p5a_pt100}</td>\n      <td>{row_p6a_pt100}</td>\n      <td>{row_p8a_pt100}</td>\n      <td>{row_p5a3_pt100}</td>\n      <td>{row_p5a4_pt100}</td>\n      <td>{row_p9a_dryout_pt100}</td>\n      <td>{row_room_pt100}</td>\n    </tr>\n  </tbody>\n</table>\n\n</body>\n</html>\n<!--END_HTML-->\n\n<!--BEGIN_SCHEMA_JSON-->\n{\n  \"scalars\": [\"company_name\", \"report_title\", \"print_date\", \"sheet_name\"],\n  \"row_tokens\": [\"row_date_time\", \"row_m1a2_pt100\", \"row_m1a3_pt100\", \"row_p3a_pt100\", \"row_p4a_pt100\", \"row_p5a_pt100\", \"row_p6a_pt100\", \"row_p8a_pt100\", \"row_p5a3_pt100\", \"row_p5a4_pt100\", \"row_p9a_dryout_pt100\", \"row_room_pt100\"],\n  \"totals\": [],\n  \"notes\": \"Landscape A4. 12-column temperature sensor log table. Header has company name, report title left-aligned and print date right-aligned. Sheet name appears below header. All sensor columns are numeric/right-aligned except DATE TIME which is left-aligned.\"\n}\n<!--END_SCHEMA_JSON-->"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1282,
+    "completion_tokens": 1241,
+    "total_tokens": 2523
+  }
+}
+```
+
+## 2026-03-28T15:27:35+00:00Z - template_fix_html_call2
+
+```json
+{
+  "id": "claude-cli-1774711655",
+  "model": "claude-sonnet",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "<!--BEGIN_HTML-->\n<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n<title>Temperature Report</title>\n<style>\n  :root {\n    --col-datetime-w: 36mm;\n    --col-data-w: 22mm;\n    --header-font-size: 13pt;\n    --sub-header-font-size: 9.5pt;\n    --table-font-size: 7pt;\n    --row-height: 5mm;\n  }\n\n  @page {\n    size: A4 landscape;\n    margin: 8mm 8mm 8mm 8mm;\n  }\n\n  * {\n    box-sizing: border-box;\n    margin: 0;\n    padding: 0;\n  }\n\n  body {\n    font-family: Arial, Helvetica, sans-serif;\n    font-size: var(--table-font-size);\n    background: #fff;\n    color: #000;\n    width: 281mm;\n  }\n\n  #report-header {\n    display: flex;\n    justify-content: space-between;\n    align-items: flex-start;\n    margin-bottom: 1.5mm;\n    width: 100%;\n  }\n\n  .header-left .company-name {\n    font-size: var(--header-font-size);\n    font-weight: bold;\n    line-height: 1.2;\n  }\n\n  .header-left .report-title {\n    font-size: var(--sub-header-font-size);\n    font-weight: bold;\n    line-height: 1.3;\n  }\n\n  .header-right {\n    font-size: 7.5pt;\n    text-align: right;\n    padding-top: 1mm;\n    white-space: nowrap;\n    flex-shrink: 0;\n  }\n\n  .sheet-name {\n    font-size: 8pt;\n    margin-bottom: 2mm;\n  }\n\n  #data-table {\n    width: 100%;\n    border-collapse: collapse;\n    table-layout: fixed;\n    font-size: var(--table-font-size);\n  }\n\n  #data-table th,\n  #data-table td {\n    border: 0.5px solid #000;\n    padding: 1px 2px;\n    text-align: center;\n    vertical-align: middle;\n    word-wrap: break-word;\n    overflow: hidden;\n    line-height: 1.2;\n  }\n\n  #data-table thead tr th {\n    background-color: #fff;\n    font-weight: bold;\n    font-size: 6.5pt;\n    height: 9mm;\n    vertical-align: middle;\n  }\n\n  #data-table tbody tr td {\n    height: var(--row-height);\n    font-size: var(--table-font-size);\n    text-align: right;\n    font-variant-numeric: tabular-nums;\n    padding-right: 2px;\n  }\n\n  #data-table tbody tr td:first-child {\n    text-align: left;\n    padding-left: 2px;\n  }\n\n  #data-table colgroup col:nth-child(1)  { width: var(--col-datetime-w); }\n  #data-table colgroup col:nth-child(2)  { width: var(--col-data-w); }\n  #data-table colgroup col:nth-child(3)  { width: var(--col-data-w); }\n  #data-table colgroup col:nth-child(4)  { width: var(--col-data-w); }\n  #data-table colgroup col:nth-child(5)  { width: var(--col-data-w); }\n  #data-table colgroup col:nth-child(6)  { width: var(--col-data-w); }\n  #data-table colgroup col:nth-child(7)  { width: var(--col-data-w); }\n  #data-table colgroup col:nth-child(8)  { width: var(--col-data-w); }\n  #data-table colgroup col:nth-child(9)  { width: var(--col-data-w); }\n  #data-table colgroup col:nth-child(10) { width: var(--col-data-w); }\n  #data-table colgroup col:nth-child(11) { width: var(--col-data-w); }\n  #data-table colgroup col:nth-child(12) { width: var(--col-data-w); }\n</style>\n</head>\n<body>\n\n<div id=\"report-header\">\n  <div class=\"header-left\">\n    <div class=\"company-name\">{company_name}</div>\n    <div class=\"report-title\">{report_title}</div>\n  </div>\n  <div class=\"header-right\">Print Date : {print_date}</div>\n</div>\n\n<div class=\"sheet-name\">{sheet_name}</div>\n\n<table id=\"data-table\">\n  <colgroup>\n    <col><col><col><col><col><col>\n    <col><col><col><col><col><col>\n  </colgroup>\n  <thead>\n    <tr>\n      <th>DATE TIME</th>\n      <th>M1A-2<br>PT100</th>\n      <th>M1A-3<br>PT100</th>\n      <th>P3A<br>PT100</th>\n      <th>P4A<br>PT100</th>\n      <th>P5A<br>PT100</th>\n      <th>P6A<br>PT100</th>\n      <th>P8A<br>PT100</th>\n      <th>P5A-3<br>PT100</th>\n      <th>P5A-4<br>PT100</th>\n      <th>P9A<br>DRYOUT<br>PT100</th>\n      <th>ROOM<br>PT100</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <td>{row_date_time}</td>\n      <td>{row_m1a2_pt100}</td>\n      <td>{row_m1a3_pt100}</td>\n      <td>{row_p3a_pt100}</td>\n      <td>{row_p4a_pt100}</td>\n      <td>{row_p5a_pt100}</td>\n      <td>{row_p6a_pt100}</td>\n      <td>{row_p8a_pt100}</td>\n      <td>{row_p5a3_pt100}</td>\n      <td>{row_p5a4_pt100}</td>\n      <td>{row_p9a_dryout_pt100}</td>\n      <td>{row_room_pt100}</td>\n    </tr>\n  </tbody>\n</table>\n\n</body>\n</html>\n<!--END_HTML-->"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1767,
+    "completion_tokens": 1026,
+    "total_tokens": 2793
+  }
+}
+```
+
+## 2026-03-28T15:28:44+00:00Z - llm_call_3_df_v2
+
+```json
+{
+  "id": "claude-cli-1774711724",
+  "model": "claude-sonnet",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\n  \"mapping\": {\n    \"row_date_time\": \"neuract__TEMPERATURES.timestamp_utc\",\n    \"row_m1a2_pt100\": \"neuract__TEMPERATURES.M1A_2_PT100_PV\",\n    \"row_m1a3_pt100\": \"neuract__TEMPERATURES.M1A_3_PT100_PV\",\n    \"row_p3a_pt100\": \"neuract__TEMPERATURES.P3A_PT100_PV\",\n    \"row_p4a_pt100\": \"neuract__TEMPERATURES.P4A_PT100_PV\",\n    \"row_p5a_pt100\": \"neuract__TEMPERATURES.P5A_PT100_PV\",\n    \"row_p6a_pt100\": \"neuract__TEMPERATURES.P6A_PT100_PV\",\n    \"row_p8a_pt100\": \"neuract__TEMPERATURES.P8A_PT100_PV\",\n    \"row_p5a3_pt100\": \"UNRESOLVED\",\n    \"row_p5a4_pt100\": \"UNRESOLVED\",\n    \"row_p9a_dryout_pt100\": \"neuract__TEMPERATURES.P9A_DRY_OUT_PT100_PV\",\n    \"row_room_pt100\": \"neuract__TEMPERATURES.ROOM_PT100_PV\",\n    \"print_date\": \"To Be Selected...\"\n  },\n  \"token_samples\": {\n    \"company_name\": \"COSTAL FEEDS\",\n    \"report_title\": \"TEMPERATURE REPORT\",\n    \"print_date\": \"04/03/2026\",\n    \"sheet_name\": \"Sheet1\",\n    \"row_date_time\": \"2026-03-03 05:00:00\",\n    \"row_m1a2_pt100\": \"17.9\",\n    \"row_m1a3_pt100\": \"17.9\",\n    \"row_p3a_pt100\": \"55.3\",\n    \"row_p4a_pt100\": \"55.5\",\n    \"row_p5a_pt100\": \"48.2\",\n    \"row_p6a_pt100\": \"41.6\",\n    \"row_p8a_pt100\": \"98.3\",\n    \"row_p5a3_pt100\": \"79.6\",\n    \"row_p5a4_pt100\": \"65.2\",\n    \"row_p9a_dryout_pt100\": \"26.3\",\n    \"row_room_pt100\": \"6301.1\"\n  },\n  \"meta\": {\n    \"constants\": {\n      \"company_name\": \"COSTAL FEEDS\",\n      \"report_title\": \"TEMPERATURE REPORT\",\n      \"sheet_name\": \"Sheet1\"\n    },\n    \"unresolved\": [\"row_p5a3_pt100\", \"row_p5a4_pt100\"],\n    \"hints\": {\n      \"row_p5a3_pt100\": {\n        \"note\": \"Template header is 'P5A-3 PT100' but no P5A_3_PT100_PV column exists in neuract__TEMPERATURES. Nearest candidates by naming pattern are neuract__TEMPERATURES.P8A_3_PT100_PV \u2014 confirm with domain expert whether P5A-3 and P8A-3 refer to the same sensor.\"\n      },\n      \"row_p5a4_pt100\": {\n        \"note\": \"Template header is 'P5A-4 PT100' but no P5A_4_PT100_PV column exists in neuract__TEMPERATURES. Nearest candidate is neuract__TEMPERATURES.P8A_4_PT100_PV \u2014 confirm with domain expert. Note: neuract__TEMPERATURES.P8A_DRY_OUT_PT100_PV is also unmapped and may belong to one of these slots.\"\n      }\n    }\n  }\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 6459,
+    "completion_tokens": 540,
+    "total_tokens": 6999
+  }
+}
+```
+
+## 2026-03-28T15:30:06+00:00Z - llm_call_3_df_v2
+
+```json
+{
+  "id": "claude-cli-1774711806",
+  "model": "claude-sonnet",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\n  \"mapping\": {\n    \"print_date\": \"params.print_date\",\n    \"row_date_time\": \"neuract__TEMPERATURES.timestamp_utc\",\n    \"row_m1a2_pt100\": \"neuract__TEMPERATURES.M1A_2_PT100_PV\",\n    \"row_m1a3_pt100\": \"neuract__TEMPERATURES.M1A_3_PT100_PV\",\n    \"row_p3a_pt100\": \"neuract__TEMPERATURES.P3A_PT100_PV\",\n    \"row_p4a_pt100\": \"neuract__TEMPERATURES.P4A_PT100_PV\",\n    \"row_p5a_pt100\": \"neuract__TEMPERATURES.P5A_PT100_PV\",\n    \"row_p6a_pt100\": \"neuract__TEMPERATURES.P6A_PT100_PV\",\n    \"row_p8a_pt100\": \"neuract__TEMPERATURES.P8A_PT100_PV\",\n    \"row_p5a3_pt100\": \"UNRESOLVED\",\n    \"row_p5a4_pt100\": \"UNRESOLVED\",\n    \"row_p9a_dryout_pt100\": \"neuract__TEMPERATURES.P9A_DRY_OUT_PT100_PV\",\n    \"row_room_pt100\": \"neuract__TEMPERATURES.ROOM_PT100_PV\"\n  },\n  \"token_samples\": {\n    \"company_name\": \"COSTAL FEEDS\",\n    \"report_title\": \"TEMPERATURE REPORT\",\n    \"print_date\": \"04/03/2026\",\n    \"sheet_name\": \"Sheet1\",\n    \"row_date_time\": \"2026-03-03 05:00:00\",\n    \"row_m1a2_pt100\": \"17.9\",\n    \"row_m1a3_pt100\": \"55.3\",\n    \"row_p3a_pt100\": \"55.5\",\n    \"row_p4a_pt100\": \"48.2\",\n    \"row_p5a_pt100\": \"41.6\",\n    \"row_p6a_pt100\": \"98.3\",\n    \"row_p8a_pt100\": \"79.6\",\n    \"row_p5a3_pt100\": \"65.2\",\n    \"row_p5a4_pt100\": \"63.2\",\n    \"row_p9a_dryout_pt100\": \"26.3\",\n    \"row_room_pt100\": \"6301.1\"\n  },\n  \"meta\": {\n    \"unresolved\": [\"row_p5a3_pt100\", \"row_p5a4_pt100\"],\n    \"hints\": {\n      \"row_p5a3_pt100\": {\n        \"op\": \"CANDIDATE\",\n        \"columns\": [\"neuract__TEMPERATURES.P8A_3_PT100_PV\"],\n        \"note\": \"Template header is 'P5A-3 PT100' but no P5A_3 column exists in catalog. Nearest catalog column by positional pattern is P8A_3_PT100_PV \u2014 confirm machine prefix with domain expert before mapping.\"\n      },\n      \"row_p5a4_pt100\": {\n        \"op\": \"CANDIDATE\",\n        \"columns\": [\"neuract__TEMPERATURES.P8A_4_PT100_PV\"],\n        \"note\": \"Template header is 'P5A-4 PT100' but no P5A_4 column exists in catalog. Nearest catalog column by positional pattern is P8A_4_PT100_PV \u2014 confirm machine prefix with domain expert before mapping.\"\n      }\n    }\n  }\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 6512,
+    "completion_tokens": 512,
+    "total_tokens": 7024
+  }
+}
+```
+
+## 2026-03-28T15:31:40+00:00Z - v3_df
+
+```json
+{
+  "id": "claude-cli-1774711900",
+  "model": "claude-sonnet",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"overview_md\":\"## Executive Summary\\nTemperature Report for **COSTAL FEEDS** pulling PT100 sensor readings from the `neuract__TEMPERATURES` table. Each row is a timestamped snapshot across 11 temperature probe locations. Two tokens (`row_p5a3_pt100`, `row_p5a4_pt100`) remain UNRESOLVED \u2014 the catalog contains no P5A_3 or P5A_4 columns; nearest positional candidates are `P8A_3_PT100_PV` and `P8A_4_PT100_PV` (confirm machine prefix with domain expert before promoting to resolved).\\n\\n## Token Inventory\\n| Token | Type | Source |\\n|---|---|---|\\n| company_name | Scalar | Literal: COSTAL FEEDS |\\n| report_title | Scalar | Literal: TEMPERATURE REPORT |\\n| print_date | Scalar | PARAM:print_date |\\n| sheet_name | Scalar | Literal: Sheet1 |\\n| row_date_time | Row | neuract__TEMPERATURES.timestamp_utc \u2192 format_date |\\n| row_m1a2_pt100 | Row | neuract__TEMPERATURES.M1A_2_PT100_PV |\\n| row_m1a3_pt100 | Row | neuract__TEMPERATURES.M1A_3_PT100_PV |\\n| row_p3a_pt100 | Row | neuract__TEMPERATURES.P3A_PT100_PV |\\n| row_p4a_pt100 | Row | neuract__TEMPERATURES.P4A_PT100_PV |\\n| row_p5a_pt100 | Row | neuract__TEMPERATURES.P5A_PT100_PV |\\n| row_p6a_pt100 | Row | neuract__TEMPERATURES.P6A_PT100_PV |\\n| row_p8a_pt100 | Row | neuract__TEMPERATURES.P8A_PT100_PV |\\n| row_p5a3_pt100 | Row | **UNRESOLVED** (candidate: P8A_3_PT100_PV) |\\n| row_p5a4_pt100 | Row | **UNRESOLVED** (candidate: P8A_4_PT100_PV) |\\n| row_p9a_dryout_pt100 | Row | neuract__TEMPERATURES.P9A_DRY_OUT_PT100_PV |\\n| row_room_pt100 | Row | neuract__TEMPERATURES.ROOM_PT100_PV |\\n\\n## Mapping Table\\nAll resolved tokens draw from `neuract__TEMPERATURES`. No joins to other tables required.\\n\\n## Join & Date Rules\\nSingle-table query on `neuract__TEMPERATURES`. Optional date range filter on `timestamp_utc` via `date_from` / `date_to` parameters.\\n\\n## Transformations\\n`row_date_time` is derived via `format_date` on `timestamp_utc` using format `%d-%m-%Y %H:%M:%S`. All numeric temperature readings are formatted to 2 decimal places.\\n\\n## Parameters\\n- `print_date` (required): Print date displayed in the report header.\\n- `date_from` / `date_to` (optional): Date range filter applied to `timestamp_utc`.\\n\",\"step5_requirements\":{\"datasets\":{\"header\":{\"description\":\"Static scalar values \u2014 company name and report title are inlined literals; print_date is a user-supplied parameter; sheet_name is an inlined literal.\",\"columns\":[\"company_name\",\"report_title\",\"print_date\",\"sheet_name\"]},\"rows\":{\"description\":\"One row per timestamp snapshot from neuract__TEMPERATURES, filtered by optional date range, ordered by timestamp_utc ascending. Two temperature columns (row_p5a3_pt100, row_p5a4_pt100) are unresolved and will render empty.\",\"columns\":[\"row_date_time\",\"row_m1a2_pt100\",\"row_m1a3_pt100\",\"row_p3a_pt100\",\"row_p4a_pt100\",\"row_p5a_pt100\",\"row_p6a_pt100\",\"row_p8a_pt100\",\"row_p5a3_pt100\",\"row_p5a4_pt100\",\"row_p9a_dryout_pt100\",\"row_room_pt100\"],\"grouping\":[],\"ordering\":[\"timestamp_utc ASC\"]},\"totals\":{\"description\":\"No totals required for this report.\",\"columns\":[]}},\"semantics\":\"date_from and date_to are optional range filters on timestamp_utc. print_date is a display-only parameter passed through to the header. company_name, report_title, and sheet_name are baked-in literals.\",\"parameters\":{\"required\":[{\"name\":\"print_date\",\"type\":\"date\"}],\"optional\":[{\"name\":\"date_from\",\"type\":\"date\"},{\"name\":\"date_to\",\"type\":\"date\"}]},\"transformations\":[\"No reshape required \u2014 direct column select from neuract__TEMPERATURES.\",\"row_date_time is formatted from timestamp_utc using format_date op with format %d-%m-%Y %H:%M:%S.\",\"All resolved numeric PT100 columns rendered with number(2) formatter.\"]},\"contract\":{\"tokens\":{\"scalars\":[\"company_name\",\"report_title\",\"print_date\",\"sheet_name\"],\"row_tokens\":[\"row_date_time\",\"row_m1a2_pt100\",\"row_m1a3_pt100\",\"row_p3a_pt100\",\"row_p4a_pt100\",\"row_p5a_pt100\",\"row_p6a_pt100\",\"row_p8a_pt100\",\"row_p5a3_pt100\",\"row_p5a4_pt100\",\"row_p9a_dryout_pt100\",\"row_room_pt100\"],\"totals\":[]},\"mapping\":{\"company_name\":\"PARAM:company_name\",\"report_title\":\"PARAM:report_title\",\"print_date\":\"PARAM:print_date\",\"sheet_name\":\"PARAM:sheet_name\",\"row_date_time\":\"neuract__TEMPERATURES.timestamp_utc\",\"row_m1a2_pt100\":\"neuract__TEMPERATURES.M1A_2_PT100_PV\",\"row_m1a3_pt100\":\"neuract__TEMPERATURES.M1A_3_PT100_PV\",\"row_p3a_pt100\":\"neuract__TEMPERATURES.P3A_PT100_PV\",\"row_p4a_pt100\":\"neuract__TEMPERATURES.P4A_PT100_PV\",\"row_p5a_pt100\":\"neuract__TEMPERATURES.P5A_PT100_PV\",\"row_p6a_pt100\":\"neuract__TEMPERATURES.P6A_PT100_PV\",\"row_p8a_pt100\":\"neuract__TEMPERATURES.P8A_PT100_PV\",\"row_p5a3_pt100\":\"UNRESOLVED\",\"row_p5a4_pt100\":\"UNRESOLVED\",\"row_p9a_dryout_pt100\":\"neuract__TEMPERATURES.P9A_DRY_OUT_PT100_PV\",\"row_room_pt100\":\"neuract__TEMPERATURES.ROOM_PT100_PV\"},\"unresolved\":[\"row_p5a3_pt100\",\"row_p5a4_pt100\"],\"join\":{\"parent_table\":\"neuract__TEMPERATURES\",\"parent_key\":\"__rowid__\",\"child_table\":\"neuract__TEMPERATURES\",\"child_key\":\"__rowid__\"},\"date_columns\":{\"neuract__TEMPERATURES\":\"timestamp_utc\"},\"filters\":{\"optional\":{\"date_from\":\"neuract__TEMPERATURES.timestamp_utc\",\"date_to\":\"neuract__TEMPERATURES.timestamp_utc\"}},\"reshape_rules\":[{\"purpose\":\"Direct column select from TEMPERATURES, no unpivot needed\",\"strategy\":\"NONE\",\"columns\":[]}],\"row_computed\":{\"row_date_time\":{\"op\":\"format_date\",\"column\":\"timestamp_utc\",\"format\":\"%d-%m-%Y %H:%M:%S\"}},\"totals_math\":{},\"totals\":{},\"formatters\":{\"row_m1a2_pt100\":\"number(2)\",\"row_m1a3_pt100\":\"number(2)\",\"row_p3a_pt100\":\"number(2)\",\"row_p4a_pt100\":\"number(2)\",\"row_p5a_pt100\":\"number(2)\",\"row_p6a_pt100\":\"number(2)\",\"row_p8a_pt100\":\"number(2)\",\"row_p9a_dryout_pt100\":\"number(2)\",\"row_room_pt100\":\"number(2)\"},\"order_by\":{\"rows\":[\"timestamp_utc ASC\"]},\"header_tokens\":[\"company_name\",\"report_title\",\"print_date\",\"sheet_name\"],\"row_tokens\":[\"row_date_time\",\"row_m1a2_pt100\",\"row_m1a3_pt100\",\"row_p3a_pt100\",\"row_p4a_pt100\",\"row_p5a_pt100\",\"row_p6a_pt100\",\"row_p8a_pt100\",\"row_p5a3_pt100\",\"row_p5a4_pt100\",\"row_p9a_dryout_pt100\",\"row_room_pt100\"],\"row_order\":[\"timestamp_utc ASC\"],\"literals\":{\"company_name\":\"COSTAL FEEDS\",\"report_title\":\"TEMPERATURE REPORT\",\"sheet_name\":\"Sheet1\"},\"notes\":\"row_p5a3_pt100 and row_p5a4_pt100 are UNRESOLVED \u2014 template headers 'P5A-3 PT100' and 'P5A-4 PT100' have no matching columns in the catalog. Nearest positional candidates are neuract__TEMPERATURES.P8A_3_PT100_PV and neuract__TEMPERATURES.P8A_4_PT100_PV respectively. Confirm correct machine prefix with domain expert before promoting these to resolved mappings.\"},\"validation\":{\"unknown_tokens\":[],\"unknown_columns\":[],\"token_coverage\":{\"scalars_mapped_pct\":100,\"row_tokens_mapped_pct\":100,\"totals_mapped_pct\":100}}}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 7642,
+    "completion_tokens": 1662,
+    "total_tokens": 9304
+  }
+}
+```
+
+## 2026-03-28T16:03:37+00:00Z - template_chat_create_v1
+
+```json
+{
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": "{\"message\": \"I understand you need a Factory Temperature Report with sensor data. Before I generate the template, I need to clarify a few details to ensure it meets your needs:\\n\\n1. **Report Structure**: \\n   - Should the report have a header with factory name, report date, and perhaps a summary section?\\n   - Do you want the sensor data displayed as a table with columns for Timestamp, Sensor 1 (M1A_2_PT100_PV), and Sensor 2 (P3A_PT100_PV)?\\n\\n2. **Data Fields**:\\n   - Are `timestamp_utc`, `M1A_2_PT100_PV`, and `P3A_PT100_PV` the only fields you need in the table?\\n   - Do you need any calculated fields (e.g., average temperature, min/max values)?\\n\\n3. **Styling & Branding**:\\n   - Do you have specific colors, fonts, or a logo you'd like to include?\\n   - Should the report be in portrait or landscape orientation?\\n\\n4. **Repeating Rows**:\\n   - Will the sensor data be a repeating block of rows (one row per timestamp)?\\n\\nLet me know your preferences, and I'll create a professional template for you!\", \"ready_to_apply\": false, \"proposed_changes\": null, \"follow_up_questions\": [\"Should the report include a header with factory name and report date?\", \"Do you need calculated fields like average or min/max temperatures?\", \"Any specific branding (colors, logo) or layout preferences?\", \"Will the sensor data be a repeating block of rows?\"], \"updated_html\": null}"
+      }
+    }
+  ],
+  "model": "Qwen/Qwen3.5-27B-FP8",
+  "usage": {
+    "prompt_tokens": 1228,
+    "completion_tokens": 361,
+    "total_tokens": 1589
+  }
+}
+```
+
+## 2026-03-28T16:41:40+00:00Z - template_chat_create_v1
+
+```json
+{
+  "id": "claude-cli-1774716100",
+  "model": "claude-qwen",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"message\": \"Thank you for sharing that information. I understand you need a temperatures report for a factory with sensor data including timestamp and two PT100 temperature sensors (M1A_2_PT100_PV and P3A_PT100_PV).\\n\\nBefore I generate the template, let me confirm a few details:\\n\\n1. **Report Layout**: Would you prefer a table format showing all temperature readings chronologically, or a summary view with charts/graphs?\\n\\n2. **Time Period**: Should the report show a specific date range (e.g., daily, weekly, monthly) or all available data?\\n\\n3. **Header Information**: What header details should appear? (e.g., factory name, report date, sensor locations)\\n\\n4. **Styling**: Any specific colors or branding requirements? (e.g., your company colors, professional blue/gray theme, etc.)\\n\\n5. **Additional Data**: Do you need columns for minimum/maximum temperatures, averages, or status indicators (normal/alert)?\", \"ready_to_apply\": false, \"proposed_changes\": null, \"follow_up_questions\": [\"What layout format do you prefer - chronological table or summary view?\", \"Should the report show a specific date range or all data?\", \"What header information should appear (factory name, report date, etc.)?\", \"Any specific colors or branding requirements?\", \"Do you need min/max/average columns or status indicators?\"], \"updated_html\": null}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1316,
+    "completion_tokens": 336,
+    "total_tokens": 1652
+  }
+}
+```
+
+## 2026-03-29T17:36:51+00:00Z - template_initial_html
+
+```json
+{
+  "id": "claude-cli-1774805811",
+  "model": "claude-qwen",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": ""
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1282,
+    "completion_tokens": 0,
+    "total_tokens": 1282
+  }
+}
+```
+
+## 2026-03-29T17:36:57+00:00Z - template_fix_html_call2
+
+```json
+{
+  "id": "claude-cli-1774805817",
+  "model": "claude-qwen",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": ""
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 562,
+    "completion_tokens": 0,
+    "total_tokens": 562
+  }
+}
+```
+
+## 2026-03-29T17:37:05+00:00Z - llm_call_3_df_v2
+
+```json
+{
+  "id": "claude-cli-1774805825",
+  "model": "claude-qwen",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": ""
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5312,
+    "completion_tokens": 0,
+    "total_tokens": 5312
+  }
+}
+```
+
+## 2026-03-29T17:37:10+00:00Z - llm_call_3_df_v2
+
+```json
+{
+  "id": "claude-cli-1774805830",
+  "model": "claude-qwen",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": ""
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5351,
+    "completion_tokens": 0,
+    "total_tokens": 5351
+  }
+}
+```
+
+## 2026-03-29T17:37:14+00:00Z - llm_call_3_df_v2
+
+```json
+{
+  "id": "claude-cli-1774805834",
+  "model": "claude-qwen",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": ""
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5351,
+    "completion_tokens": 0,
+    "total_tokens": 5351
+  }
+}
+```
+
+## 2026-03-29T17:37:19+00:00Z - llm_call_3_df_v2
+
+```json
+{
+  "id": "claude-cli-1774805839",
+  "model": "claude-qwen",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": ""
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5351,
+    "completion_tokens": 0,
+    "total_tokens": 5351
+  }
+}
+```
+
+## 2026-03-29T17:37:23+00:00Z - llm_call_3_df_v2
+
+```json
+{
+  "id": "claude-cli-1774805843",
+  "model": "claude-qwen",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": ""
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 5351,
+    "completion_tokens": 0,
+    "total_tokens": 5351
+  }
+}
+```
+
+## 2026-03-29T17:38:12+00:00Z - v3_df
+
+```json
+{
+  "id": "claude-cli-1774805892",
+  "model": "claude-qwen",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\n  \"overview_md\": \"# Production Run Report - Contract Mapping Overview\\n\\n## Executive Summary\\nThis report consolidates production data from multiple equipment sources including airlock operations, machine run hours, scale measurements, temperature sensors, and recipe configurations. The data is timestamped and can be filtered by date range for production monitoring and analysis.\\n\\n## Token Inventory\\n- **Scalars**: None (header-level metadata not required)\\n- **Row Tokens**: None defined in schema\\n- **Totals**: None defined in schema\\n\\n## Mapping Table\\nNo tokens are currently defined in the schema. The catalog contains the following available data sources:\\n\\n### Available Tables:\\n1. **neuract__AIRLOCK3** - Airlock cycle tracking (timestamp, duration, shift, machine)\\n2. **neuract__RUNHOURS** - Equipment run hours across 100+ machine sensors (hours/minutes/seconds)\\n3. **neuract__Scale2** - Ingredient weighing (fish oil, soya oil, water batch counts)\\n4. **neuract__TEMPERATURES** - Temperature sensor readings from production equipment\\n5. **recipes** - Recipe configuration with bin contents and setpoints\\n\\n## Join & Date Rules\\n- Parent table: `neuract__AIRLOCK3` (primary production timeline)\\n- Date column: `timestamp_utc` for filtering and ordering\\n- All tables share `timestamp_utc` for temporal joins\\n\\n## Transformations\\n- Timestamps formatted as `DD-MM-YYYY HH:MM:SS`\\n- Numeric values displayed with 2 decimal precision\\n- Run hours can be converted from HRS/MIN/SEC components to total hours\\n\\n## Parameters\\n- **Required**: None (no key tokens specified)\\n- **Optional**: `date_from`, `date_to` for date range filtering\\n\",\n  \"step5_requirements\": {\n    \"datasets\": {\n      \"header\": {\"description\": \"Report-level metadata (none defined)\", \"columns\": []},\n      \"rows\": {\"description\": \"Production timeline with airlock cycles, run hours, scale readings, temperatures, and recipe data\", \"columns\": [], \"grouping\": [], \"ordering\": [\"timestamp_utc ASC\"]},\n      \"totals\": {\"description\": \"Aggregate calculations (none defined)\", \"columns\": []}\n    },\n    \"semantics\": \"No tokens defined in schema. When tokens are added, they should map to catalog columns using TABLE.COLUMN format. Date filters (date_from, date_to) enable temporal filtering across all timestamped tables.\",\n    \"parameters\": {\n      \"required\": [],\n      \"optional\": [{\"name\": \"date_from\", \"type\": \"date\"}, {\"name\": \"date_to\", \"type\": \"date\"}]\n    },\n    \"transformations\": [\n      \"Format all timestamp_utc columns as DD-MM-YYYY HH:MM:SS\",\n      \"Apply number(2) formatting to numeric measurement columns\",\n      \"Order rows by timestamp_utc ascending\"\n    ]\n  },\n  \"contract\": {\n    \"tokens\": {\n      \"scalars\": [],\n      \"row_tokens\": [],\n      \"totals\": []\n    },\n    \"mapping\": {},\n    \"unresolved\": [],\n    \"join\": {\n      \"parent_table\": \"neuract__AIRLOCK3\",\n      \"parent_key\": \"rowid\",\n      \"child_table\": \"neuract__AIRLOCK3\",\n      \"child_key\": \"rowid\"\n    },\n    \"date_columns\": {\n      \"neuract__AIRLOCK3\": \"timestamp_utc\",\n      \"neuract__RUNHOURS\": \"timestamp_utc\",\n      \"neuract__Scale2\": \"timestamp_utc\",\n      \"neuract__TEMPERATURES\": \"timestamp_utc\"\n    },\n    \"filters\": {\n      \"optional\": {\n        \"date_from\": \"neuract__AIRLOCK3.timestamp_utc\",\n        \"date_to\": \"neuract__AIRLOCK3.timestamp_utc\"\n      }\n    },\n    \"reshape_rules\": [],\n    \"row_computed\": {},\n    \"totals_math\": {},\n    \"totals\": {},\n    \"formatters\": {},\n    \"order_by\": {\n      \"rows\": [\"ROWID ASC\"]\n    },\n    \"header_tokens\": [],\n    \"row_tokens\": [],\n    \"row_order\": [\"ROWID ASC\"],\n    \"literals\": {},\n    \"notes\": \"Schema has no tokens defined. Catalog provides 5 tables: AIRLOCK3 (airlock cycles), RUNHOURS (100+ machine sensors), Scale2 (ingredient weights), TEMPERATURES (sensor readings), recipes (bin configurations). All tables have timestamp_utc for filtering.\"\n  },\n  \"validation\": {\n    \"unknown_tokens\": [],\n    \"unknown_columns\": [],\n    \"token_coverage\": {\n      \"scalars_mapped_pct\": 100,\n      \"row_tokens_mapped_pct\": 100,\n      \"totals_mapped_pct\": 100\n    }\n  }\n}"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 4882,
+    "completion_tokens": 1022,
+    "total_tokens": 5904
+  }
+}
+```
+
+## 2026-03-29T17:44:50+00:00Z - template_initial_html
+
+```json
+{
+  "id": "claude-cli-1774806290",
+  "model": "claude-qwen",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": ""
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1233,
+    "completion_tokens": 0,
+    "total_tokens": 1233
+  }
+}
+```
+
+## 2026-03-29T17:44:55+00:00Z - template_fix_html_call2
+
+```json
+{
+  "id": "claude-cli-1774806295",
+  "model": "claude-qwen",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": ""
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 505,
+    "completion_tokens": 0,
+    "total_tokens": 505
+  }
+}
+```
+
+## 2026-03-29T17:46:21+00:00Z - template_initial_html
+
+```json
+{
+  "id": "claude-cli-1774806381",
+  "model": "claude-qwen",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": ""
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1233,
+    "completion_tokens": 0,
+    "total_tokens": 1233
+  }
+}
+```
+
