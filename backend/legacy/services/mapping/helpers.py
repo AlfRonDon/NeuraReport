@@ -91,9 +91,13 @@ def build_catalog_from_db(db_path) -> list[str]:
     try:
         loader = get_loader_for_ref(db_path)
         for table in loader.table_names():
-            frame = loader.frame(table)
-            for col in frame.columns:
-                col_name = str(col or "").strip()
+            # Use PRAGMA to get column names without loading any data.
+            if hasattr(loader, 'column_names'):
+                col_names = loader.column_names(table)
+            else:
+                col_names = [c for c, _ in loader.table_info(table)]
+            for col_name in col_names:
+                col_name = str(col_name or "").strip()
                 if col_name:
                     catalog.append(f"{table}.{col_name}")
     except Exception as exc:
@@ -121,18 +125,33 @@ def build_rich_catalog_from_db(db_path) -> dict[str, list[dict[str, Any]]]:
     try:
         loader = get_loader_for_ref(db_path)
         for table in loader.table_names():
-            frame = loader.frame(table)
+            # Use PRAGMA for column metadata; only load a small sample for sample values.
+            info = loader.pragma_table_info(table) if hasattr(loader, 'pragma_table_info') else []
             cols: list[dict[str, Any]] = []
-            for col in frame.columns:
-                col_name = str(col or "").strip()
+            # Load just 5 rows for sample values instead of entire table
+            sample_df = None
+            try:
+                import sqlite3 as _sqlite3
+                with _sqlite3.connect(str(loader.db_path), timeout=30) as _con:
+                    quoted = table.replace('"', '""')
+                    sample_df = pd.read_sql_query(f'SELECT * FROM "{quoted}" LIMIT 5', _con)
+            except Exception:
+                pass
+            for col_info in info:
+                col_name = col_info.get("name", "")
                 if not col_name or col_name.lower() in _SKIP_COLS:
                     continue
-                col_type = loader.column_type(table, col_name)
+                declared = (col_info.get("type") or "TEXT").upper()
+                col_type = "TEXT"
+                if "INT" in declared: col_type = "INTEGER"
+                elif "REAL" in declared or "FLOAT" in declared: col_type = "REAL"
+                elif "DATE" in declared or "TIME" in declared: col_type = "DATETIME"
                 sample = ""
-                non_null = frame[col_name].dropna()
-                if not non_null.empty:
-                    sample = str(non_null.iloc[0])[:80]
-                cols.append({"column": col_name, "type": col_type or "TEXT", "sample": sample})
+                if sample_df is not None and col_name in sample_df.columns:
+                    non_null = sample_df[col_name].dropna()
+                    if not non_null.empty:
+                        sample = str(non_null.iloc[0])[:80]
+                cols.append({"column": col_name, "type": col_type, "sample": sample})
             result[table] = cols
     except Exception as exc:
         logger.exception(
@@ -339,7 +358,13 @@ def execute_token_query_df(
 
     try:
         loader = get_loader_for_ref(db_path)
-        df = loader.frame(table_clean)
+        # Pre-filter at SQL level when date column is known to avoid
+        # loading millions of rows just for distinct key values.
+        if date_column_name and (start_date or end_date) and hasattr(loader, 'frame_date_filtered'):
+            df = loader.frame_date_filtered(table_clean, date_column_name, start_date, end_date)
+            debug_info["mode"] = "dataframe_sql_prefiltered"
+        else:
+            df = loader.frame(table_clean)
     except Exception as exc:
         debug_info["error"] = f"Failed to load table: {exc}"
         return [], debug_info
@@ -352,7 +377,7 @@ def execute_token_query_df(
     filtered = df[df[column_clean].notna()]
     filtered = filtered[filtered[column_clean].astype(str).str.strip() != ""]
 
-    # Apply date filter if available
+    # Apply DataFrame-level date filter as safety net (handles timezone stripping, snap, etc.)
     if date_column_name and start_date and end_date and date_column_name in df.columns:
         try:
             from backend.app.services.reports.discovery_excel import _coerce_datetime_series, _parse_date_like, _snap_end_of_day
